@@ -1,0 +1,84 @@
+name: Release checked development merge
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Exact SHA to check/build only; manual runs never publish
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: bmeas-validation
+  cancel-in-progress: false
+  queue: max
+jobs:
+  admission:
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.event.outputs.sha }}
+      publish: ${{ steps.event.outputs.publish }}
+      base-sha: ${{ steps.base.outputs.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Admit exact merge or read-only verification
+        id: event
+        run: python3 .github/scripts/automation.py admit
+      - name: Verify merge parents and read pre-merge main SHA
+        id: base
+        env:
+          ADMITTED_SHA: ${{ steps.event.outputs.sha }}
+          PUBLICATION: ${{ steps.event.outputs.publish }}
+        shell: python
+        run: |
+          import json, os, subprocess
+          sha = ''
+          if os.environ['PUBLICATION'] == 'true':
+              event = json.load(open(os.environ['GITHUB_EVENT_PATH']))
+              merged = os.environ['ADMITTED_SHA']
+              parents = subprocess.check_output(['git', 'rev-list', '--parents', '-n', '1', merged]).decode().split()
+              assert len(parents) == 3, 'A develop -> main merge commit is required'
+              assert parents[2] == event['pull_request']['head']['sha'], 'Merged develop SHA differs'
+              subprocess.run(['git', 'merge-base', '--is-ancestor', merged, 'origin/main'], check=True)
+              sha = parents[1]
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('sha=' + sha + '\n')
+  build:
+    needs: admission
+    if: needs.admission.outputs.sha != ''
+    uses: ./.github/workflows/package-check.yaml
+    with:
+      sha: ${{ needs.admission.outputs.sha }}
+      compare-to: ${{ needs.admission.outputs.base-sha }}
+      artifact-name: checked-release-${{ needs.admission.outputs.sha }}
+  publish:
+    needs: [admission, build]
+    if: needs.admission.outputs.publish == 'true' && needs.build.outputs.package == 'true'
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BUILD_SHA: ${{ needs.admission.outputs.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ needs.admission.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify admitted merge is on main
+        run: git merge-base --is-ancestor "$BUILD_SHA" origin/main
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: checked-release-${{ needs.admission.outputs.sha }}
+          path: release-dist/
+      - name: Publish checked bytes without overwriting existing content
+        run: python3 .github/scripts/automation.py publish

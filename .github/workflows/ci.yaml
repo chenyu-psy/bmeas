@@ -1,0 +1,75 @@
+name: Repository CI
+on:
+  push:
+    branches: [main, develop, work/current-0.0.47.9000]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: bmeas-validation
+  cancel-in-progress: false
+  queue: max
+jobs:
+  configuration:
+    name: configuration-validation
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    outputs:
+      package: ${{ steps.detect.outputs.package }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Validate automation boundaries without remote writes
+        run: python3 .github/scripts/test_automation.py
+      - name: Detect package presence
+        id: detect
+        shell: python
+        run: |
+          import os, pathlib
+          found = pathlib.Path('DESCRIPTION').exists()
+          if found:
+              assert all(pathlib.Path(p).exists() for p in ['NAMESPACE', 'R']), 'Incomplete package source'
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('package=' + str(found).lower() + '\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write('Exact SHA: ' + os.environ['GITHUB_SHA'] + '\n\n')
+              if not found:
+                  f.write('Configuration only: package checks are not executed. No release.\n')
+  package:
+    needs: configuration
+    if: needs.configuration.outputs.package == 'true'
+    uses: ./.github/workflows/package-check.yaml
+    with:
+      sha: ${{ github.sha }}
+      compare-to: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && github.event.pull_request.base.sha || '' }}
+      require-new-tag: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' }}
+  R-CMD-check:
+    needs: [configuration, package]
+    if: always() && (needs.configuration.outputs.package == 'true' || github.event_name == 'pull_request')
+    runs-on: ubuntu-slim
+    timeout-minutes: 2
+    env:
+      PACKAGE_PRESENT: ${{ needs.configuration.outputs.package }}
+      PACKAGE_RESULT: ${{ needs.package.result }}
+    steps:
+      - shell: python
+        run: |
+          import os
+          assert os.environ['PACKAGE_PRESENT'] == 'true', 'No actual R package to check'
+          assert os.environ['PACKAGE_RESULT'] == 'success', 'Package check failed or did not complete'
+  release-metadata:
+    needs: [configuration, package, R-CMD-check]
+    if: always() && (needs.configuration.outputs.package == 'true' || github.event_name == 'pull_request')
+    runs-on: ubuntu-slim
+    timeout-minutes: 2
+    env:
+      PACKAGE_RESULT: ${{ needs.package.result }}
+      VERSION: ${{ needs.package.outputs.version }}
+    steps:
+      - shell: python
+        run: |
+          import os
+          assert os.environ['PACKAGE_RESULT'] == 'success' and os.environ['VERSION'], 'Version/NEWS validation not completed'
