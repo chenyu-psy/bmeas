@@ -106,12 +106,15 @@ jobs:
           packages: |
             deps::.
             any::rcmdcheck
-            any::posterior@1.7.0
-            any::lavaan@0.7-2
+            any::posterior
+            any::lavaan
             stan-dev/cmdstanr@da99e2ba954658bdad63bffb738c4444c33a4e0e
           dependencies: '"all"'
           install-quarto: false
           install-pandoc: false
+      - name: Enforce and verify effective dependency pins
+        if: steps.detect.outputs.package == 'true'
+        run: Rscript --vanilla .github/scripts/check_dependencies.R
       - name: Build installable source tar
         if: steps.detect.outputs.package == 'true'
         run: R CMD build . --no-manual
