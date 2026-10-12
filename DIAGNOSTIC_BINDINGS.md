@@ -1,0 +1,11 @@
+# Diagnostic estimator bindings
+
+Selected parameter diagnostics use the posterior 1.7.0 estimator profile on intact original-chain matrices. To prevent caller S3 methods from silently changing the statistics, the package resolves a finite set of concrete functions and gives their unchanged bodies and formals locked private lexical bindings. The installed namespaces and caller methods are untouched.
+
+The canonical graph is created lazily on the first selected-parameter request. At most 17 cloned closures and 24 distinct alias names, installed in each of three locked lexical overlays, cover posterior's Rhat/bulk ESS/tail ESS/mean-MCSE paths, their split/rank/fold/autocovariance helpers, base apply, and empirical median/type-7 quantiles. The owning namespaces remain the lexical parents. Concrete aliases include mean.default, sort.default, unique.default, as.matrix.default, as.array.default, aperm.default and format.default. The stats private format_perc helper is resolved only if the installed quantile.default body actually uses it; a required but missing helper refuses explicitly.
+
+A locked private cache retains one canonical graph. Profile validation compares against that graph by identity without inspecting a caller-supplied closure environment or forcing its bindings. HMC-only calculations neither initialize the graph nor require posterior. No graph, function or environment is saved in a refreshed fit.
+
+Saved method provenance is plain metadata: the profile name, actual versions, cloned/direct source maps and two construction flags. Those flags mean bodies/formals matched and lexical bindings were locked at construction; they are not numerical-validation or inference-quality claims. The tested reference environment is R 4.5.3. The package still admits R >= 4.1 subject to required capabilities and checked dimensions, without claiming untested cross-version numerical equivalence.
+
+The known numeric-slot inventory includes 56 fields per retained parameter record and 64 fixed binding-construction/validation scalar slots when parameters are requested. Function/environment/AST objects, strings, provider/R/native temporaries and total process RSS remain outside that quota. See DIAGNOSTIC_METRIC_COSTS.md for the complete scope.

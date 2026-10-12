@@ -1,0 +1,4 @@
+// Original MIT example: chance floor 0.5; known difficulty; no hidden hierarchy.
+real example_two_afc_lpmf(int y, real sensitivity, real difficulty) {
+  return bernoulli_lpmf(y | 0.5 + 0.5 * inv_logit(sensitivity - difficulty));
+}

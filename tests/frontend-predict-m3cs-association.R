@@ -1,0 +1,15 @@
+source(file.path('helpers','native-guard.R'))
+# Deterministic association-only sensitivity control, not calibrated power.
+root<-Sys.getenv('MEASUREMENTPKG_SOURCE');if(nzchar(root))for(f in list.files(file.path(root,'R'),full.names=TRUE))source(f)else library(bmeas)
+private<-function(n)if(nzchar(root))get(n,.GlobalEnv)else getFromNamespace(n,'bmeas')
+plan_fun<-private('.bh_m3cs_statistics_plan');stat_fun<-private('.bh_m3cs_statistics');aggregate_fun<-private('.bh_ppc_aggregate')
+d<-expand.grid(.person_key=paste0('p',1:4),.task=c('left','right'),stringsAsFactors=FALSE);d$.observation_id<-paste0('r',1:8)
+y<-matrix(0L,8,10);y[,1]<-rep(c(0L,1L,3L,4L),2);y[,10]<-4L-y[,1];d$counts<-I(y);d$options<-I(matrix(1L,8,10))
+s<-list(models=list(cs=list(model=list(name='m3_cs_reference'),data=d)),data_map=list(blocks=list(cs=d),subject_keys=paste0('p',1:4)))
+p<-plan_fun(s,2,list(max_draws=2,max_observations=8,max_simulated_values=160,max_statistics=200,max_pair_terms=50000),'population')
+matched<-stat_fun(s,p);changed<-y;changed[5:8,]<-y[8:5,];observed<-stat_fun(s,p,list(cs=changed))
+marginal<-matched$domain=='marginal';paired<-matched$domain=='measurement_structure'
+stopifnot(identical(matched$estimate[marginal],observed$estimate[marginal]),any(abs(matched$estimate[paired]-observed$estimate[paired])>.1))
+reps<-matrix(rep(matched$estimate,2),2,byrow=TRUE,dimnames=list(NULL,matched$statistic_id));out<-aggregate_fun(observed,reps)
+stopifnot(!any(out$table$outside_interval[marginal]),any(out$table$outside_interval[paired]))
+cat('PASS association-only permutation leaves all marginal means/SDs unchanged but changes paired-category covariance screens; not calibrated power.\n')

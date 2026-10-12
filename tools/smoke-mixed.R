@@ -1,0 +1,18 @@
+# Explicit engineering-only mixed likelihood smoke; no automatic PPC.
+args <- commandArgs(trailingOnly=TRUE)
+root <- normalizePath(if(length(args)) args[1L] else ".")
+for(f in list.files(file.path(root,"R"),pattern="[.]R$",full.names=TRUE)) source(f)
+out <- if(length(args)>1L) args[2L] else file.path(dirname(root),"bhmm-mixed-validation")
+dir.create(out,recursive=TRUE,showWarnings=FALSE)
+spec <- demo_mixed_spec()
+run <- run_config(1,1,1,20,20,20261003,1,48,8,20)
+writeLines(as.character(make_stan_code(spec)),file.path(out,"basic_cfa.stan"))
+fit <- fit_measurement(spec,run,file.path(out,"compile"),file.path(out,"sampling"))
+stopifnot(all(fit$backend$return_codes()==0L),fit$cache$computation$status!="failed")
+s <- capture.output(print(summary(fit))); g <- fit;g$backend<-NULL
+stopifnot(identical(s,capture.output(print(summary(g)))))
+writeLines(s,file.path(out,"smoke-summary.txt"))
+utils::write.csv(prior_table(spec),file.path(out,"prior-table.csv"),row.names=FALSE)
+utils::write.csv(parameter_summary(fit),file.path(out,"parameter-summary.csv"),row.names=FALSE)
+saveRDS(fit,file.path(out,"smoke-fit.rds"))
+cat(s,sep="\n");cat("\nPASS: mixed Gaussian/binomial/lognormal compilation, sampling and cached summary\n")

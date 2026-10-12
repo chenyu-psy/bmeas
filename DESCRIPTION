@@ -1,0 +1,21 @@
+Package: bmeas
+Type: Package
+Title: Bayesian Hierarchical Measurement Modeling
+Version: 0.0.47.9000
+Authors@R: person("Prototype", "Contributors", role = c("aut", "cre"), email = "prototype@example.invalid")
+Description: Bayesian hierarchical measurement modeling combining flexible
+    response models, including standard statistical distributions and
+    cognitive-model likelihoods, with user-specified latent measurement
+    structures. Individual-level model parameters, factor loadings, latent
+    traits, and their correlations are estimated jointly from the observed
+    data, allowing parameter-estimation uncertainty to be carried through the
+    measurement model. The framework accommodates structures ranging from
+    simple factor models to decompositions of individual differences into
+    general and domain-specific components. Current computation and validation
+    cover explicitly documented subsets.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.1.0)
+Imports: stats, utils
+Suggests: cmdstanr (>= 0.8.0), posterior (>= 1.5.0), jsonlite, lavaan
+NeedsCompilation: no

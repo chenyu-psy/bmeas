@@ -1,0 +1,16 @@
+# Explicit small population-level predictive screening; reuses a completed fit.
+args <- commandArgs(trailingOnly=TRUE)
+root <- normalizePath(if(length(args)) args[1L] else ".")
+out <- if(length(args)>1L) args[2L] else file.path(dirname(root),"bhmm-mixed-validation")
+for(f in list.files(file.path(root,"R"),pattern="[.]R$",full.names=TRUE)) source(f)
+fit <- readRDS(file.path(out,"smoke-fit.rds"))
+budget <- diagnostic_budget(max_draws=10,max_observations=48,max_simulated_values=480)
+print(ppc_plan(fit,draws=10,budget=budget))
+checked <- assess_measurement_fit(fit,draws=10,seed=20261004,budget=budget)
+stopifnot(checked$cache$predictive_fit$status=="computed",fit_checks(checked)$metadata$level=="population")
+text <- capture.output(print(summary(checked))); cached<-checked;cached$backend<-NULL
+stopifnot(identical(text,capture.output(print(summary(cached)))))
+writeLines(text,file.path(out,"ppc-summary.txt"))
+utils::write.csv(fit_checks(checked)$table,file.path(out,"ppc-discrepancies.csv"),row.names=FALSE)
+saveRDS(checked,file.path(out,"ppc-fit.rds"))
+cat(text,sep="\n");cat("\nPASS: explicit 10-rep population PPC and backend-free summary; screening only\n")
