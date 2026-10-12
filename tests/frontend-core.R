@@ -12,10 +12,11 @@ one <- bhmm(bhmf(Ability=~x1+x2+x3),d,subject="person",fit=FALSE)
 ok(nrow(model_table(one,"targets"))==3L && nrow(model_table(one,"loadings"))==3L,"S01 scalar component and exact membership")
 ok(all(model_table(one,"components")$variance==1) && one$formula$residual=="none","unit latent variance and no hidden parameter residual")
 ok(sum(vapply(one$data_map$blocks,nrow,integer(1)))==24L,"one likelihood row per actual response")
-ok(check_model(one)$identification$status=="local_rank_full_not_global_proof","local identification status is qualified")
-ok(check_model(one)$priors$status=="complete" && all(nzchar(get_prior(one)$source)),"proper visible basic-family default profile")
+one_checks <- check_model(one)
+ok(one_checks$identification$status=="local_rank_full_not_global_proof","local identification status is qualified")
+ok(one_checks$priors$status=="complete" && all(nzchar(get_prior(one)$source)),"proper visible basic-family default profile")
 ok(is.list(attr(get_prior(one),"calibration")),"calibration inputs retained")
-ok(check_model(one)$backend$status=="deterministic_gaussian_qualified","deterministic compiler scope is separate from HMC/inference")
+ok(one_checks$backend$status=="deterministic_gaussian_qualified","deterministic compiler scope is separate from HMC/inference")
 err(bhmm(one),"E_RUN_CONFIG")
 err(bhmm(one,chains=1,iter=10,warmup=10,resources='development'),"E_RUN_CONFIG")
 err(bhmm(one,chains=1,iter=101,warmup=50,resources='development'),"E_SMOKE_BUDGET")
@@ -54,8 +55,9 @@ err(bhmf(A=~x1,B=~x2,cor=list(default="free",zero=list(~A+Unknown))),"E_CORRELAT
 # Fixed/equal rules now have a scalar-pair R/IR contract; the historical
 # misspelled singular field remains invalid instead of acquiring a meaning.
 err(bhmf(A=~x1,B=~x2,cor=list(default="zero",fixed=list(list(pair=~A+B,value=.3)))),"E_CORRELATION_SYNTAX")
-graph <- bhmm(bhmf(aG=~x1+x2+x3,aP=~x4+x5+x6,aC=~x7+x8+x9,
-  cG=~x10+x11+x12,cP=~x13+x14+x15,cC=~x16+x17+x18,
+# This case protects a six-node correlation graph, not an indicator-count grid.
+graph <- bhmm(bhmf(aG=~x1,aP=~x2,aC=~x3,
+  cG=~x4,cP=~x5,cC=~x6,
   cor=list(default="free",zero=list(~aG+aP+aC,~cG+cP+cC,~aP+cC,~aC+cP))),d,subject="person",fit=FALSE)
 mask <- model_table(graph,"correlation_mask")
 ok(sum(mask[upper.tri(mask)]=="free")==7L,"S17 graph module exact seven marginal free edges")
@@ -69,8 +71,10 @@ bound <- bhmm(m,data=list(scores=block),fit=FALSE)
 ok(nrow(model_table(bound,"targets"))==6L,"cognitive-style target selector values frozen at declaration")
 err(bhmf(G=~scores$mu[paste0("v",1:3)]),"E_SELECTOR")
 err(bhmm(bhmf(G=~scores$mu[c("v1","v2","v3")]),data=list(scores=block),fit=FALSE),"E_PARAMETER_COVERAGE")
-blocks <- list(a=block,b=block)
-a_tasks <- b_tasks <- c("v1","v2","v3","s1","s2","s3")
+disjoint_data <- long[long$item %in% c("v1","v2","v3"),]
+disjoint_block <- observe(gaussian_model(),disjoint_data,"person","item","value_z",units="z")
+blocks <- list(a=disjoint_block,b=disjoint_block)
+a_tasks <- b_tasks <- c("v1","v2","v3")
 disjoint_m <- bhmf(A=~a$mu[a_tasks],B=~b$mu[b_tasks],cor="independent")
 err(bhmm(disjoint_m,data=blocks,fit=FALSE),"E_SUBJECTS")
 separate <- bhmm(disjoint_m,data=blocks,subjects="separate",fit=FALSE)
@@ -111,9 +115,9 @@ err(bhmm(bhmf(G=~x1+x2+x3),d,subject="person",prior=set_prior("normal(0,1)","loa
 grouped<-bhmf(A=~(x1+x2)+x3,B=~x4+x5+x6,C=~x7+x8+x9,D=~x10+x11+x12,
   cor=list(default='free',zero=list(~(A+B):(C+D))))
 ok(sum(grouped$correlations$state=='zero')==4L,'safe parentheses and Cartesian groups preserve only cross edges')
-rotated<-bhmm(bhmf(A=~x1+x2+x3+x4+x5+x6+x7+x8+x9,B=~x1+x2+x3+x4+x5+x6+x7+x8+x9,cor='independent'),d,subject='person',fit=FALSE)
+rotated<-bhmm(bhmf(A=~x1+x2+x3+x4+x5+x6,B=~x1+x2+x3+x4+x5+x6,cor='independent'),d,subject='person',fit=FALSE)
 ri<-check_model(rotated)$identification
-ok(ri$status=='proven_unidentified'&&ri$latent_covariance_parameters==18L&&ri$latent_covariance_dimension_bound==17L,'rank-aware intrinsic covariance dimension proof')
+ok(ri$status=='proven_unidentified'&&ri$free_covariance_parameters==18L&&ri$observable_covariance_moments==21L&&ri$latent_covariance_parameters==12L&&ri$latent_covariance_dimension_bound==11L&&grepl('rank-aware',ri$reason,fixed=TRUE),'rank-aware intrinsic covariance dimension proof')
 err(bhmm(rotated,chains=1,iter=20,warmup=10,exploratory=TRUE,resources='development'),'E_IDENTIFICATION')
 small_eta<-bhmm(ordinary,d,subject='person',prior=set_prior('lkj(.1)','cor'),fit=FALSE)
 ok(check_model(small_eta)$numerical_qualification$status=='execution_unqualified_prior'&&any(grepl('lkj(.1)',get_prior(small_eta)$prior,fixed=TRUE)),'mathematically valid eta<1 stays inspectable unchanged')

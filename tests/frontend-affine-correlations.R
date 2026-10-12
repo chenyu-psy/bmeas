@@ -26,7 +26,7 @@ for(r in c(.3,-.3)){
 }
 s15<-function(eta=2)prep(bhmf(A=~x1,B=~x2,C=~x3,D=~x4,
  cor=list(default='zero',equal=list(shared=list(~A:B,~C:D)))),prior=set_prior(paste0('lkj(',eta,')'),'cor'))
-s<-s15();p<-get_prior(s);tab<-model_table(s,'correlations');dom<-model_table(s,'correlation_domains')$component
+s<-s15();s_checks<-check_model(s);p<-get_prior(s);tab<-model_table(s,'correlations');dom<-model_table(s,'correlation_domains')$component
 ok(nrow(model_table(s,'correlation_primitives'))==1L&&sum(tab$state=='free')==2L&&sum(p$class=='cor')==1L&&p$parameter_count[p$class=='cor']==1L,'S15 one unique label and one prior count')
 ok(sum(model_table(s,'loading_primitives')$sign=='positive_anchor')==3L&&ncol(model_table(s,'orientation_sign_system')$allowed_binary_basis)==3L,'S15 exact three-dimensional sign gauge')
 ok(all(is.na(model_table(s,'orientation')$sign_group))&&!anyNA(model_table(s,'components')$orientation),'parity system reports actual basis without fake pairwise groups')
@@ -34,9 +34,9 @@ ok(max(abs(c(dom$lower,dom$upper)-c(-1,1)))<1e-12&&dom$dimension==1L,'shared dis
 v<-.bh_covariance_probe(s,1);v[.bh_covariance_layout(s)$indices$component_cor]<--.35;state<-.bh_covariance_state(s,v)
 ok(state$R_component[1,2]==-.35&&state$R_component[3,4]==-.35&&all(state$R_component[cbind(c(1,1,2,2),c(3,4,3,4))]==0),'negative shared label scatters once into both blocks')
 for(eta in c(.4,.5,.6,1,2)){
- z<-s15(eta);g<-check_model(z)$correlation_prior_geometry$component
+ z<-if(eta==2)s else s15(eta);checks<-if(eta==2)s_checks else check_model(z);g<-checks$correlation_prior_geometry$component
  ok(g$status==if(eta>.5)'proven_proper_prior'else'proven_improper_prior','shared matching determinant prior exact integrability threshold')
- ok(!identical(check_model(z)$posterior_propriety$status,'proven_proper'),'prior status never promotes arbitrary posterior propriety')
+ ok(!identical(checks$posterior_propriety$status,'proven_proper'),'prior status never promotes arbitrary posterior propriety')
 }
 # Constraint order/aliases/fixed propagation and no-op compatibility.
 rules<-list(first=list(~A:B,~B:C),second=list(~B:C,~A:C))
@@ -83,7 +83,7 @@ z<-prep(bhmf(residual=list(targets=~x1+x2+x3,cor=eqr)),one);i<-check_model(z)$id
 ok(i$status=='local_rank_full_not_global_proof'&&all(i$probe_ranks==7L),'one repeated target restores shared-rho generic rank7')
 ok(sum(get_prior(z)$class=='cor')==1L&&get_prior(z)$parameter_count[get_prior(z)$class=='cor']==1L,'residual equality has one density coordinate')
 # Same textual equality labels in different layers stay independent.
-z<-prep(bhmf(A=~x1+x2+x3,B=~x4+x5+x6,C=~x7+x8+x9,
+z<-prep(bhmf(A=~x1,B=~x2,C=~x3,
  cor=list(default='zero',equal=list(shared=list(~A:B,~A:C))),
  residual=list(targets=~x1+x2+x3,cor=eqr)))
 pr<-model_table(z,'correlation_primitives')
@@ -93,20 +93,23 @@ ok(sum(get_prior(z)$class=='cor')==2L&&all(get_prior(z)$parameter_count[get_prio
 Q<-matrix(c(1,-1,1),3,1,dimnames=list(paste0('x',1:3),'q'))
 cf<-list(default='zero',fixed=list(fixed(~G:P,.2)))
 b<-prep(bhmf(G=~x1+x2+x3,P=component(~x1+x2+x3,Q,loading='shared'),cor=cf),prior=set_prior('half_normal(1)','amplitude'))
-ok(check_model(b)$identification$status=='proven_unidentified'&&!is.null(check_model(b)$identification$affine_correlation_alias),'fixed-rho basis reflection known global negative')
+b_checks<-check_model(b)
+ok(b_checks$identification$status=='proven_unidentified'&&!is.null(b_checks$identification$affine_correlation_alias),'fixed-rho basis reflection known global negative')
 v<-.bh_covariance_probe(b,1);lay<-.bh_covariance_layout(b);v[lay$indices$loading]<-c(.5,.8,-.3);v[lay$indices$amplitude]<-.6
 w<-v;w[lay$indices$loading]<--v[lay$indices$loading]-2*.2*.6*Q[,1]
 ok(max(abs(.bh_covariance_state(b,v)$Sigma_predictor-.bh_covariance_state(b,w)$Sigma_predictor))<1e-14,'actual basis state map preserves reflection alias')
 err(stancode(b),'E_IDENTIFICATION')
 b0<-prep(bhmf(G=~x1+x2+x3,P=component(~x1+x2+x3,Q,loading='shared'),cor=cf,
  loadings=list(fixed=list(list(cells=list(G=~x1),value=0)))),prior=set_prior('half_normal(1)','amplitude'))
-ok(is.null(check_model(b0)$identification$affine_correlation_alias)&&all(check_model(b0)$identification$probe_ranks==6L),'fixed-zero pure basis row remains rank6 positive')
+b0_checks<-check_model(b0)
+ok(is.null(b0_checks$identification$affine_correlation_alias)&&all(b0_checks$identification$probe_ranks==6L),'fixed-zero pure basis row remains rank6 positive')
 # Two opposite signed markers, one offdiagonal alias and known rho retain a different global alias.
 mk<-prep(bhmf(A=~x1+x2,B=~x1+x2,cor=c2(.3),scale=list(A=list(marker=~x1,value=1),B=list(marker=~x2,value=-1)),
  loadings=list(equal=list(off=list(A=~x2,B=~x1)))))
-ok(check_model(mk)$identification$status=='proven_unidentified'&&!is.null(check_model(mk)$identification$affine_correlation_alias),'opposite-marker fixed-rho alias is preserved')
+mk_checks<-check_model(mk)
+ok(mk_checks$identification$status=='proven_unidentified'&&!is.null(mk_checks$identification$affine_correlation_alias),'opposite-marker fixed-rho alias is preserved')
 err(stancode(mk),'E_IDENTIFICATION')
 # Portable sealed inspection and immutable source-level domains.
 before<-serialize(s,NULL,version=2);tmp<-tempfile();saveRDS(s,tmp);again<-readRDS(tmp);unlink(tmp)
-ok(identical(model_table(s),model_table(again))&&identical(check_model(s),check_model(again))&&identical(before,serialize(s,NULL,version=2)),'prepared affine RDS and inspection preserve sealed bytes')
+ok(identical(model_table(s),model_table(again))&&identical(s_checks,check_model(again))&&identical(before,serialize(s,NULL,version=2)),'prepared affine RDS and inspection preserve sealed bytes')
 cat('PASSED',passed,'public integration checks\n')

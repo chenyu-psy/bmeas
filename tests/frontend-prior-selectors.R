@@ -8,7 +8,13 @@ err<-function(x,code){e<-tryCatch({force(x);NULL},error=identity);ok(inherits(e,
 d<-data.frame(person=rep(1:6,2),x1=sin(1:12),x2=cos(1:12),x3=sin((1:12)/3),x4=cos((1:12)/2))
 f<-bhmf(G=~x1+x2+x3+x4,residual=list(targets=~x1+x2+x3+x4))
 prep<-function(prior,formula=f,data=d)bhmm(formula,data,subject='person',prior=prior,fit=FALSE)
-prior_values<-function(spec){x<-get_prior(spec);x<-x[order(x$parameter),c('parameter','class','target','component','layer','prior','source')];rownames(x)<-NULL;x}
+table_values<-function(x){attr(x,'prior_resolution')<-NULL;x<-x[order(x$parameter),c('parameter','class','target','component','layer','prior','source')];rownames(x)<-NULL;x}
+prior_values<-function(spec)table_values(get_prior(spec))
+public_table_equal<-function(table,spec){attr(table,'prior_resolution')<-NULL;identical(table,get_prior(spec))}
+# Rule-order matrices exercise the real resolver on one real prepared context;
+# public preparation is retained once per rule family and for all API boundaries.
+selector_base<-prep(NULL)
+resolve<-function(rules,spec=selector_base)private('.bh_prior_table')(spec,do.call(c,rules))
 prior_data<-function(spec)private('.bh_prior_data')(spec)
 permutations<-function(x){if(length(x)<2L)return(list(x));unlist(lapply(seq_along(x),function(i)lapply(permutations(x[-i]),function(y)c(x[i],y))),recursive=FALSE)}
 grouped<-c(set_prior('normal(0,.4)','loading',target=~x1+x2),set_prior('normal(1,2)','Intercept',target=~x1+x2),
@@ -23,7 +29,8 @@ ok(identical(prior_data(a),prior_data(b))&&identical(stancode(a),stancode(b)),'g
 ok(!anyDuplicated(model_table(a,'parameters')$parameter)&&nrow(model_table(a,'parameters'))==nrow(model_table(b,'parameters')),'grouping introduces no shared/equal or duplicated unknowns')
 rules<-list(set_prior('normal(0,1)','loading'),set_prior('normal(0,.5)','loading',target=~x1+x2+x3+x4),set_prior('normal(0,.2)','loading',target=~x1))
 reference<-prep(do.call(c,rules))
-for(order in permutations(1:3))ok(identical(prior_values(prep(do.call(c,rules[order]))),prior_values(reference)),'global/group/singleton refinement is order-independent')
+ok(public_table_equal(resolve(rules),reference),'public refinement agrees with direct resolution on the same scientific context')
+for(order in permutations(1:3))ok(identical(table_values(resolve(rules[order])),prior_values(reference)),'global/group/singleton refinement is order-independent')
 x<-get_prior(reference);x<-x[x$class=='loading',]
 ok(x$prior[x$target=='scores::mu::x1']=='normal(0,.2)'&&all(x$prior[x$target!='scores::mu::x1']=='normal(0,.5)'),'explicit all-target restriction refines NULL even when sets cover the same model')
 component_rules<-list(set_prior('normal(0,1)','loading'),set_prior('normal(0,.3)','loading',component='G'))
@@ -32,15 +39,25 @@ for(order in list(1:2,2:1)){s<-prep(do.call(c,component_rules[order]));ok(all(ge
 overlap<-bhmf(G=~x1+x2+x3+x4,S=~x1+x2,cor='independent')
 intersection_rules<-list(set_prior('normal(0,1)','loading',component='G'),set_prior('normal(0,.5)','loading',target=~x1),
  set_prior('normal(0,.2)','loading',component='G',target=~x1))
+overlap_base<-prep(NULL,formula=overlap)
 reference<-prep(do.call(c,intersection_rules),formula=overlap)
-for(order in permutations(1:3))ok(identical(prior_values(prep(do.call(c,intersection_rules[order]),formula=overlap)),prior_values(reference)),'third intersection rule resolves all six input orders')
+ok(public_table_equal(resolve(intersection_rules,overlap_base),reference),'public intersection resolution retains the complete prior table and metadata')
+x<-get_prior(reference);g1<-x$class=='loading'&x$component=='G'&x$target=='scores::mu::x1'
+ok(sum(g1)==1L&&x$prior[g1]=='normal(0,.2)','intersection singleton receives its explicit literal density')
+for(order in permutations(1:3))ok(identical(table_values(resolve(intersection_rules[order],overlap_base)),prior_values(reference)),'third intersection rule resolves all six input orders')
 for(order in list(1:2,2:1))err(prep(do.call(c,intersection_rules[order]),formula=overlap),'E_PRIOR_CONFLICT')
 nested<-list(set_prior('normal(0,.9)','loading',target=~x1+x2+x3+x4),set_prior('normal(0,.7)','loading',target=~x1+x2+x3),
  set_prior('normal(0,.5)','loading',target=~x1+x2),set_prior('normal(0,.2)','loading',target=~x1))
-ref<-prior_values(prep(do.call(c,nested)))
-for(order in permutations(1:4))ok(identical(prior_values(prep(do.call(c,nested[order]))),ref),'nested group/subgroup/singleton precedence across24 orders')
+nested_public<-prep(do.call(c,nested));ref<-prior_values(nested_public)
+ok(public_table_equal(resolve(nested),nested_public),'public nested resolution retains the complete prior table and metadata')
+expected_nested<-c('scores::mu::x1'='normal(0,.2)','scores::mu::x2'='normal(0,.5)','scores::mu::x3'='normal(0,.7)','scores::mu::x4'='normal(0,.9)')
+x<-ref[ref$class=='loading',]
+ok(identical(unname(x$prior),unname(expected_nested[x$target])),'nested target densities equal the independent literal refinement map')
+for(order in permutations(1:4))ok(identical(table_values(resolve(nested[order])),ref),'nested group/subgroup/singleton precedence across24 orders')
 non_nested<-list(set_prior('normal(0,.7)','loading',target=~x1+x2),set_prior('normal(0,.5)','loading',target=~x2+x3),set_prior('normal(0,.2)','loading',target=~x2))
-for(order in permutations(1:3)){s<-prep(do.call(c,non_nested[order]));x<-get_prior(s);ok(x$prior[x$class=='loading'&x$target=='scores::mu::x2']=='normal(0,.2)','an explicit overlap subset resolves incomparable target groups')}
+non_nested_public<-prep(do.call(c,non_nested))
+ok(public_table_equal(resolve(non_nested),non_nested_public),'public incomparable-group refinement agrees with direct resolution')
+for(order in permutations(1:3)){x<-resolve(non_nested[order]);ok(x$prior[x$class=='loading'&x$target=='scores::mu::x2']=='normal(0,.2)','an explicit overlap subset resolves incomparable target groups')}
 err(prep(c(non_nested[[1]],non_nested[[2]])),'E_PRIOR_CONFLICT')
 err(prep(c(set_prior('normal(0,1)','loading',target='scores::mu::x1'),set_prior('normal(0,.5)','loading',target=~scores$mu['x1']))),'E_PRIOR_CONFLICT')
 err(prep(set_prior('normal(0,1)','loading',target=~x1+unknown)),'E_PRIOR_SELECTOR')

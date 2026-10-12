@@ -126,32 +126,7 @@ jobs:
                               error_on = "warning", check_dir = "check")
       - name: Report test coverage and optional skips
         if: always() && steps.detect.outputs.package == 'true'
-        shell: python
-        run: |
-          import glob, os, pathlib, re
-          expected = len(list(pathlib.Path('tests').glob('*.R')))
-          files = glob.glob('check/**/tests/*.Rout*', recursive=True)
-          lines = [f"Checked commit: {os.environ['BUILD_SHA']}",
-                   f"Test output files: {len(files)} / {expected}"]
-          failures = [name for name in files if name.endswith('.fail')]
-          lines.append(f"Failed test output files: {len(failures)}")
-          timings = []
-          for name in glob.glob('check/**/00check.log', recursive=True):
-              for line in pathlib.Path(name).read_text(errors='replace').splitlines():
-                  if re.match(r'^\s*Running\s+.+\[[^\]]+\]\s*$', line):
-                      timings.append(line.strip())
-          lines.append(f"Completed per-file timings: {len(timings)} / {expected}")
-          if timings:
-              pathlib.Path('check/test-times.txt').write_text('\n'.join(timings) + '\n')
-          for name in sorted(files):
-              for line in pathlib.Path(name).read_text(errors='replace').splitlines():
-                  if re.match(r'^(SKIP|CmdStanR unavailable)', line):
-                      lines.append(f"{pathlib.Path(name).name}: {line}")
-          text = '\n'.join(lines) + '\n'
-          print(text)
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
-              f.write('## Engineering test coverage\n\n' + text)
-          assert expected > 0 and len(files) == expected, 'Package tests did not all complete'
+        run: python3 .github/scripts/report_check.py
       - name: Retain check logs and per-file timings, including failures
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always() && steps.detect.outputs.package == 'true'
@@ -162,6 +137,7 @@ jobs:
             check/**/00install.out
             check/**/tests/*.Rout*
             check/test-times.txt
+            check/test-summary.json
           if-no-files-found: warn
           retention-days: 14
       - name: Prepare checked release artifact
