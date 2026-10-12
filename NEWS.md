@@ -1,5 +1,9 @@
 # bmeas 0.0.47.9000 (unpublished candidate)
 
+- Remove the obsolete version-0.0.40 local approval/ledger integration script, unreachable product-cache MGS code and unused residual-cache setup. Stop writing unconsumed centered-test inventory artifacts. Retain the complete numerical-message validator boundary matrix while using representative records for public report integration; remove its one-off private-provider audit of an external historical fit. Production code is unchanged.
+
+- Use the existing frozen synthetic 0.0.33 M3-CS descriptor for passive signature portability tests, without requiring an external Stan resource. Retain both accepted hashes, unchanged serialization, zero callbacks and rejection of altered hashes, wrappers and resource digests. This fixture does not qualify native execution or resource validity.
+
 - Isolate the R-only affine cache flag test from host CmdStan discovery with a scoped deterministic toolchain fingerprint. Retain the original routing and compiler-flag assertions, verify compiler options, and restore the fingerprint and environment. Production code and native qualification are unchanged.
 
 - Construct the historical multivariate test covariance with a shared cross block and symmetric crossproduct Gram block. Assert exact fixture symmetry before public mapping; retain known coefficient/residual oracles and strict rejection of asymmetric inputs. Production mapping is unchanged.

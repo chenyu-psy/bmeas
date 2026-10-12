@@ -436,10 +436,18 @@ local({
       summary_printed=capture.output(print(saved_summary)),
       checks_printed=capture.output(print(checks)))
   }
-  report_records <- c(list(legacy_zero=list(observed_failure_messages=0L,messages=character()),
+  # The complete malformed/contradictory matrix is checked by project() above.
+  # Public reporting adds dispatch, printing and preservation contracts; repeat
+  # those contracts once per distinct record category, rather than for every
+  # malformed scalar field through all five equivalent public views.
+  report_records <- list(
+    legacy_zero=list(observed_failure_messages=0L,messages=character()),
     legacy_positive=list(observed_failure_messages=2L,messages=rep(generic,2L)),
-    modern=modern, missing=NULL), contradictions,
-    lapply(variants,function(x)x$record))
+    modern=modern, missing=NULL,
+    contradictory=contradictions$message_count,
+    absent_schema=variants$schema_1$record,
+    hostile_schema=variants$schema_4$record,
+    wrong_count_unit=variants$wrong_unit$record)
   for (name in names(report_records)) {
     fit <- make_fit(report_records[[name]])
     bytes <- serialize(fit,NULL,version=2); before_rng <- rng()
@@ -523,64 +531,6 @@ local({
   set.seed(2606)
   ok(!length(callback_state$calls), 'public saved and detached reporting touches no backend or model callbacks')
 
-  # Explicit opt-in to the pinned historical fixture. No original method is called.
-  real_path <- Sys.getenv('BMEAS_NUMERICAL_MESSAGE_REAL_FIT')
-  real_fit_checked <- FALSE
-  if (nzchar(real_path)) {
-    before_md5 <- unname(tools::md5sum(real_path))
-    ok(identical(before_md5,'aa24f2bcc1310f8548a685bc9b5df2c1'),
-      'optional real-fit fixture matches the retained genuine-fit MD5')
-    before_rng <- rng()
-    real_fit <- readRDS(real_path)
-    real_cache <- .subset2(unclass(real_fit),'cache')
-    cache_bytes <- serialize(real_cache,NULL,version=2)
-    plain_env_get <- function(env,name) {
-      if (!is.environment(env) || !exists(name,env,inherits=FALSE) || bindingIsActive(name,env))
-        stop(paste('Retained non-active data binding unavailable:',name),call.=FALSE)
-      get(name,env,inherits=FALSE)
-    }
-    backend <- .subset2(unclass(real_fit),'backend')
-    runset <- plain_env_get(backend,'runset')
-    procs <- plain_env_get(runset,'procs')
-    enclosed <- plain_env_get(procs,'.__enclos_env__')
-    private_fields <- plain_env_get(enclosed,'private')
-    retained_output <- plain_env_get(private_fields,'proc_output_')
-    plain_character <- function(x) typeof(x)=='character' && !is.object(x) &&
-      is.null(dim(x)) && !anyNA(x)
-    ok(typeof(retained_output)=='list' && !is.object(retained_output) &&
-      length(retained_output)==2L && all(vapply(retained_output,plain_character,logical(1))) &&
-      identical(unname(lengths(retained_output)),c(56L,61L)),
-      'the original saved proc_output_ contains only the two retained plain character vectors')
-    output_bytes <- serialize(retained_output,NULL,version=2)
-    lines <- unlist(retained_output,use.names=FALSE)
-    old_pattern <- paste(structural,collapse='|')
-    exception_lines <- lines[grepl('Exception:',lines,fixed=TRUE)]
-    ok(sum(grepl(old_pattern,lines))==0L && length(exception_lines)==1L &&
-      grepl('Scale parameter is 0, but must be positive',exception_lines,fixed=TRUE) &&
-      lengths(regmatches(exception_lines,gregexpr('Exception:',exception_lines,fixed=TRUE)))==2L,
-      'retained actual text proves old filter zero and one zero-scale line with two Exception tokens')
-    actual <- attempt(function() retained_output, 'labelled output-only retained-text double')
-    success(actual,exception_lines,0L,1L,
-      'the new recognizer counts the genuine retained generic exception exactly once')
-    ok(identical(real_cache$numerical_evaluations$observed_failure_messages,0L),
-      'the original producer cache remains its historical recognized zero')
-    # Public reporting uses only a detached copy; no original backend method runs.
-    real_detached <- real_fit; real_detached$backend <- NULL
-    reported <- with_report_traps(public('fit_checks')(real_detached))
-    actual_interpretation <- reported$domains$numerical_evaluations$interpretation
-    ok(identical(actual_interpretation$recognized_lines$value,0L) &&
-      actual_interpretation$recognition$availability=='unavailable_in_cache' &&
-      actual_interpretation$output_capture$status=='unknown' &&
-      identical(reported$domains$computation$record,real_cache$computation),
-      'actual historical reporting does not import the separate retained-text audit result')
-    always_unknown(actual_interpretation,'actual retained workflow keeps incomplete evidence and unknown total')
-    ok(identical(cache_bytes,serialize(.subset2(unclass(real_fit),'cache'),NULL,version=2)) &&
-      identical(output_bytes,serialize(plain_env_get(private_fields,'proc_output_'),NULL,version=2)) &&
-      identical(before_md5,unname(tools::md5sum(real_path))) && identical(before_rng,rng()),
-      'actual fit file cache retained output and RNG remain unchanged')
-    real_fit_checked <- TRUE
-  } else cat('SKIP retained actual-fit evidence: BMEAS_NUMERICAL_MESSAGE_REAL_FIT is unset\n')
-  cat('NUMERICAL_MESSAGE_REAL_FIT_CHECKED=',tolower(as.character(real_fit_checked)),'\n',sep='')
   cat('NUMERICAL_MESSAGE_CHECKS_PASSED=',passed,'\n',sep='')
   cat('Frontend numerical-message checks:',passed,
     'passed. No compiler sampler PPC or original-fit backend method executed.\n')

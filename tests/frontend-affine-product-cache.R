@@ -44,26 +44,12 @@ for(name in names(forms)) {
  ok(sum(grepl('^R_component\\[|^R_parameter\\[',calls$monitored))==nrow(pr)&&!any(c('R_component','R_parameter')%in%calls$monitored),'fixed and repeated matrix entries are excluded from primitive monitors')
  if(nrow(pr))ok(all(vapply(corr$correlation_alias_cells,nrow,integer(1))==pr$members[match(corr$parameter_key,pr$parameter)]),'structured alias membership is retained')
  map<-cache$correlation_constraints$primitive_summary_map
- if(name%in%c('common_mgs','residual_mgs')) {
-  layer<-if(name=='common_mgs')'component'else'parameter';at<-map$layer==layer
-  ok(sum(at)==6L&&all(is.na(map$computational_variable[at]))&&all(map$computational_mapping[at]=='MGS_vector_map_no_scalar_association'),'MGS marginal summaries have no false scalar raw association')
-  h<-1e-6;zero<-numeric(6);up<-down<-zero;up[4]<-h;down[4]<- -h
-  state<-private('.bh_affine_layer_state')
-  g4<-(state(s,layer,up)$R[1,4]-state(s,layer,down)$R[1,4])/(2*h)
-  up<-down<-zero;up[3]<-h;down[3]<- -h
-  g3<-(state(s,layer,up)$R[1,4]-state(s,layer,down)$R[1,4])/(2*h)
-  ok(abs(g4-1)<1e-8&&abs(g3)<1e-8,'MGS packing follows row blocks, not pair-table order')
-  q<-seq_len(6)*.04
-  grad<-vapply(1:6,function(j){a<-b<-q;a[j]<-a[j]+h;b[j]<-b[j]-h;(state(s,layer,a)$R[1,4]-state(s,layer,b)$R[1,4])/(2*h)},numeric(1))
-  ok(sum(abs(grad)>1e-7)>1L,'a generic MGS rho depends jointly on several raw coordinates')
- }else if(nrow(map))ok(all(map$computational_mapping=='unique_label_product_interval_coordinate')&&!anyNA(map$computational_variable),'product labels each retain their scalar z association')
+ if(nrow(map))ok(all(map$computational_mapping=='unique_label_product_interval_coordinate')&&!anyNA(map$computational_variable),'product labels each retain their scalar z association')
  ok(identical(cache$correlation_constraints$primitives,pr)&&identical(cache$correlation_constraints$prior_geometry,s$tables$correlation_prior_geometry),'unique prior measure and scientific metadata persist')
  expanded<-cache$expanded_correlation_matrices;constants<-expanded$entries[expanded$entries$role=='fixed_correlation_constant',,drop=FALSE]
  ok(expanded$status=='available'&&nrow(expanded$entries)==K*K+U*U,'expanded matrix summaries retain all cells separately')
  ok(all(is.na(constants$rhat))&&all(is.na(constants$sd))&&all(constants$mean==constants$fixed_value),'fixed constants have no invented uncertainty diagnostics')
  ok(all(tab$rhat==2)&&all(tab$ess_bulk==5)&&cache$inference$status=='not_assessed','poor diagnostics do not become an inference claim')
- if(name=='marked')ok(any(tab$variable=='component_covariance[2,1]'&tab$parameter_role=='derived_component_covariance')&&tab$sd[tab$variable=='component_covariance[2,1]']>0,'fixed nonzero rho still has uncertain scaled covariance')
- if(name=='both')ok(setequal(corr$correlation_layer,c('component','parameter'))&&length(unique(corr$parameter_key))==2L,'same display label never aliases two correlation layers')
  fit<-structure(list(spec=s,cache=cache,run=list(),backend=NULL,provenance=list(execution_profile=plan$execution_profile)),class=c('bmeas_fit','bhmm_fit'))
  copy<-unserialize(serialize(fit,NULL,version=2));before<-c(calls$summary,calls$draws);bytes<-serialize(copy,NULL,version=2);text<-capture.output(print(summary(copy)))
  ok(identical(posterior_summary(copy),tab)&&identical(before,c(calls$summary,calls$draws))&&identical(bytes,serialize(copy,NULL,version=2)),'detached summaries preserve bytes and never contact a backend')

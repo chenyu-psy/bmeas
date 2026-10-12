@@ -82,7 +82,7 @@ output_declarations<-function(code,data) {
 }
 # Default CmdStan sampler columns are separate from model declarations.
 sampler_columns<-c('lp__','accept_stat__','stepsize__','treedepth__','n_leapfrog__','divergent__','energy__')
-emitted_records<-list();emitted_totals<-list()
+emitted_records<-list()
 for(name in names(fixtures)) {
  s<-fixtures[[name]];before<-serialize(s,NULL,version=2);x<-standata(s);checks<-check_model(s);p<-get_prior(s)
  ok(private('.bh_centered_final_marginal_mode')(s)&&private('.bh_reference_reporting_supported')(s)&&private('.bh_reference_runtime_supported')(s),paste(name,'has bounded reporting and runtime capability'))
@@ -113,7 +113,6 @@ for(name in names(fixtures)) {
   ok(!anyNA(at)&&setequal(key(inventory),key(declared))&&all(inventory$elements==declared$elements[at]),paste(name,log_lik,'actual declarations match every inventory field'))
   size<-private('.bh_reference_output_reals')(s,log_lik)
   record_key<-paste(name,log_lik,sep=':');emitted_records[[record_key]]<-list(declared=declared,inventory=inventory)
-  emitted_totals[[record_key]]<-data.frame(fixture=name,log_lik=log_lik,K=x$K,E=x$E,U=x$U,EU=x$EU,JT=x$JT,N=x$N,O=x$O,parameters=sum(declared$elements[declared$block=='parameters']),transformed=sum(declared$elements[declared$block=='transformed']),generated=sum(declared$elements[declared$block=='generated']),sampler_allowance=66L,total=sum(declared$elements)+66L)
   ok(size$total==sum(declared$elements)+66&&size$sampled_white_coordinates==x$JT*(x$N-1)&&size$constrained_white_values==x$JT*x$N,paste(name,log_lik,'actual output count and distinct white dimensions agree'))
   ok(sum(declared$elements[declared$variable=='correlation_raw'])==x$E&&sum(declared$elements[declared$variable=='correlation_map'])==(x$K+1L)*x$K,paste(name,log_lik,'common MGS parameter and chart output are counted'))
   ok(!grepl('correlation_B|z_raw|e_raw',as.character(code))&&grepl('common_task_factor=effective_loadings_work*L_component;',as.character(code),fixed=TRUE)&&!grepl('cholesky_decompose(R_component)',as.character(code),fixed=TRUE),paste(name,log_lik,'source uses direct common factor without raw scores or rounded refactor'))
@@ -244,8 +243,6 @@ dir.create(artifacts,recursive=TRUE,showWarnings=FALSE);artifacts<-normalizePath
 # Only file metadata is used for this explicit backend double's size receipt.
 mock_output<-file.path(artifacts,'backend-metadata-only.txt')
 writeLines('metadata-only backend double; not posterior data',mock_output)
-saveRDS(emitted_records,file.path(artifacts,'emitted-declaration-inventories.rds'),version=2)
-utils::write.table(do.call(rbind,emitted_totals),file.path(artifacts,'emitted-output-counts.tsv'),sep='\t',row.names=FALSE,quote=FALSE)
 cold_fits<-list()
 original_provider_runtime<-private('.bh_provider_runtime_info')
 provider_fixture<-list(available=TRUE,cmdstanr_version='0.9.0',cmdstan_version='2.40.0',os_type='unix',wsl=FALSE)

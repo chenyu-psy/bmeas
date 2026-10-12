@@ -4,8 +4,6 @@ source_mode<-nzchar(Sys.getenv('MEASUREMENTPKG_SOURCE'))
 if(source_mode)for(f in list.files(file.path(Sys.getenv('MEASUREMENTPKG_SOURCE'),'R'),full.names=TRUE))source(f)else library(bmeas)
 private<-function(n)if(source_mode)get(n,.GlobalEnv)else getFromNamespace(n,'bmeas')
 passed<-0L;ok<-function(x,label){if(!isTRUE(x))stop(label);passed<<-passed+1L;cat('PASS',label,'\n')}
-fixed<-function(pair,value)list(pairs=pair,value=value)
-d<-data.frame(person=rep(1:4,2));for(j in 1:6)d[[paste0('x',j)]]<-sin(seq_len(8)*j/7)+seq_len(8)/9
 source(file.path('helpers','residual-product-fixtures.R'))
 specs<-residual_product_fixtures()
 name_values<-function(field,x) {
@@ -56,8 +54,6 @@ for(name in names(specs)) {
  ok(expanded$status=='available'&&nrow(expanded$entries)==K*K+U*U,'expanded matrix summaries retain all cells separately')
  ok(all(is.na(constants$rhat))&&all(is.na(constants$sd))&&all(constants$mean==constants$fixed_value),'fixed constants have no invented uncertainty diagnostics')
  ok(all(tab$rhat==2)&&all(tab$ess_bulk==5)&&cache$inference$status=='not_assessed','poor diagnostics do not become an inference claim')
- if(name=='marked')ok(any(tab$variable=='component_covariance[2,1]'&tab$parameter_role=='derived_component_covariance')&&tab$sd[tab$variable=='component_covariance[2,1]']>0,'fixed nonzero rho still has uncertain scaled covariance')
- if(name=='both')ok(setequal(corr$correlation_layer,c('component','parameter'))&&length(unique(corr$parameter_key))==2L,'same display label never aliases two correlation layers')
  fit<-structure(list(spec=s,cache=cache,run=list(),backend=NULL,provenance=list(execution_profile=plan$execution_profile)),class=c('bmeas_fit','bhmm_fit'))
  copy<-unserialize(serialize(fit,NULL,version=2));before<-c(calls$summary,calls$draws);bytes<-serialize(copy,NULL,version=2);text<-capture.output(print(summary(copy)))
  ok(identical(posterior_summary(copy),tab)&&identical(before,c(calls$summary,calls$draws))&&identical(bytes,serialize(copy,NULL,version=2)),'detached summaries preserve bytes and never contact a backend')
