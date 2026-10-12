@@ -1,5 +1,7 @@
 # bmeas 0.0.47.9000 (unpublished candidate)
 
+- Isolate the R-only affine cache flag test from host CmdStan discovery with a scoped deterministic toolchain fingerprint. Retain the original routing and compiler-flag assertions, verify compiler options, and restore the fingerprint and environment. Production code and native qualification are unchanged.
+
 - Construct the historical multivariate test covariance with a shared cross block and symmetric crossproduct Gram block. Assert exact fixture symmetry before public mapping; retain known coefficient/residual oracles and strict rejection of asymmetric inputs. Production mapping is unchanged.
 
 # bmeas 0.0.46.9000 (unpublished candidate)
