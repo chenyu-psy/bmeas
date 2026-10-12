@@ -135,7 +135,7 @@ For the generic registry/component compiler, \code{make_stan_code} and
 controls the explicit runtime reduction. A threaded binary supports both
 serial and \code{reduce_sum_static} branches using one normalized row kernel.
 The historical \code{run_config} route accepts the same reduction and grainsize, with at most2
-threads per chain and total CPU budget2. Main-API resource planning is separate; see \code{execution_plan} and RESOURCE_POLICY.md. Ordinary optimized basic templates
+threads per chain and total CPU budget2. Main-API resource planning is separate; see \code{execution_plan} and docs/RESOURCE_POLICY.md. Ordinary optimized basic templates
 reject threading. Joint observation rows stay intact, shared person parameters
 are read-only, and priors/hierarchy are outside the reduction. The generic
 compiler retains length-one array/vector ranks for JSON serialization.

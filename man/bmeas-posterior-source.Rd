@@ -13,6 +13,6 @@ max_materialized_values is a conservative simultaneous declared numeric-slot env
 
 PPC keeps its scientific response and person laws. The main streaming path admits higher explicit replication, geometry and statistic work allowances under checked allocation admission. Every chain contributes at least one selected state, and at least two states are required. The legacy acquisition path retains at most 20 replications. Individual summaries default to all validated rows or use an explicit balanced subset, with exact empirical type7 quantiles and separate source/selected/omitted counts. Larger complete cells/context/output/transform work needs the seven explicit individual allowances. No new diagnostic, approximate quantile, response model, fitting qualification or inference claim is added.
 
-Planning and saved-result reporting perform no source acquisition. Fitting resource policies do not automatically supply this consumer policy. Full syntax and scope are described in SCALABLE_POSTERIOR.md.
+Planning and saved-result reporting perform no source acquisition. Fitting resource policies do not automatically supply this consumer policy. Full syntax and scope are described in docs/SCALABLE_POSTERIOR.md.
 }
 \seealso{\code{diagnostic_budget}, \code{ppc_plan}, \code{individual_parameter_summary}, \code{execution_plan}}

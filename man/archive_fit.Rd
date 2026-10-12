@@ -20,7 +20,7 @@ relocatable plain-data directory. No model computation or diagnostics are perfor
 sampler-time authentication. Exact uncollected inputs and unsampled quantities
 remain unavailable. RDS decoding is restricted to trusted locally produced archives;
 byte budgets do not bound heap memory. Missing resources are reported; surviving
-supported resource pins are checked. See MEASUREMENT_ARCHIVES.md for the complete
+supported resource pins are checked. See docs/MEASUREMENT_ARCHIVES.md for the complete
 format, reservations, compatibility, and qualification limits.
 Creation and explicit reopening retain the unchanged portable capsule as an
 in-memory report snapshot. Passive reports delegate to the portable report
