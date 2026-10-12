@@ -46,6 +46,7 @@ jobs:
         with:
           extra-packages: any::pkgdown
           dependencies: 'NA'
+          install-pandoc: true
           install-quarto: false
       - name: Install the package without optional native providers
         if: steps.detect.outputs.package == 'true'

@@ -22,22 +22,38 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Validate automation boundaries without remote writes
         run: python3 .github/scripts/test_automation.py
-      - name: Detect package presence
+      - name: Classify configuration and package changes
         id: detect
         shell: python
         run: |
-          import os, pathlib
+          import json, os, pathlib, re, subprocess, sys
+          sys.path.insert(0, '.github/scripts')
+          from automation import classify_source
+          event = json.load(open(os.environ['GITHUB_EVENT_PATH']))
           found = pathlib.Path('DESCRIPTION').exists()
           if found:
               assert all(pathlib.Path(p).exists() for p in ['NAMESPACE', 'R']), 'Incomplete package source'
+          base = ''
+          if os.environ['GITHUB_EVENT_NAME'] == 'pull_request':
+              base = event['pull_request']['base']['sha']
+          elif os.environ['GITHUB_EVENT_NAME'] == 'push':
+              base = event.get('before', '')
+          base_package = False
+          if base and base != '0' * 40:
+              assert re.fullmatch('[0-9a-f]{40}', base)
+              subprocess.run(['git', 'cat-file', '-e', base + '^{commit}'], check=True)
+              base_package = subprocess.run(['git', 'cat-file', '-e', base + ':DESCRIPTION'],
+                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+          mode = classify_source(found, base_package)
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write('package=' + str(found).lower() + '\n')
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
-              f.write('Exact SHA: ' + os.environ['GITHUB_SHA'] + '\n\n')
+              f.write('Exact SHA: ' + os.environ['GITHUB_SHA'] + '\n\nMode: ' + mode + '\n')
               if not found:
-                  f.write('Configuration only: package checks are not executed. No release.\n')
+                  f.write('Configuration-only validation; package checks not applicable. No release.\n')
   package:
     needs: configuration
     if: needs.configuration.outputs.package == 'true'
@@ -48,28 +64,40 @@ jobs:
       require-new-tag: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' }}
   R-CMD-check:
     needs: [configuration, package]
-    if: always() && (needs.configuration.outputs.package == 'true' || github.event_name == 'pull_request')
+    if: always()
     runs-on: ubuntu-slim
     timeout-minutes: 2
     env:
+      CONFIGURATION_RESULT: ${{ needs.configuration.result }}
       PACKAGE_PRESENT: ${{ needs.configuration.outputs.package }}
       PACKAGE_RESULT: ${{ needs.package.result }}
     steps:
       - shell: python
         run: |
           import os
-          assert os.environ['PACKAGE_PRESENT'] == 'true', 'No actual R package to check'
-          assert os.environ['PACKAGE_RESULT'] == 'success', 'Package check failed or did not complete'
+          assert os.environ['CONFIGURATION_RESULT'] == 'success', 'Source classification/configuration failed'
+          if os.environ['PACKAGE_PRESENT'] == 'true':
+              assert os.environ['PACKAGE_RESULT'] == 'success', 'Package check failed or did not complete'
+          else:
+              assert os.environ['PACKAGE_PRESENT'] == 'false', 'Unknown package presence'
+              print('Configuration-only: package check not applicable')
   release-metadata:
     needs: [configuration, package, R-CMD-check]
-    if: always() && (needs.configuration.outputs.package == 'true' || github.event_name == 'pull_request')
+    if: always()
     runs-on: ubuntu-slim
     timeout-minutes: 2
     env:
+      CONFIGURATION_RESULT: ${{ needs.configuration.result }}
+      PACKAGE_PRESENT: ${{ needs.configuration.outputs.package }}
       PACKAGE_RESULT: ${{ needs.package.result }}
       VERSION: ${{ needs.package.outputs.version }}
     steps:
       - shell: python
         run: |
           import os
-          assert os.environ['PACKAGE_RESULT'] == 'success' and os.environ['VERSION'], 'Version/NEWS validation not completed'
+          assert os.environ['CONFIGURATION_RESULT'] == 'success', 'Source classification/configuration failed'
+          if os.environ['PACKAGE_PRESENT'] == 'true':
+              assert os.environ['PACKAGE_RESULT'] == 'success' and os.environ['VERSION'], 'Version/NEWS validation not completed'
+          else:
+              assert os.environ['PACKAGE_PRESENT'] == 'false', 'Unknown package presence'
+              print('Configuration-only: package release metadata not applicable')

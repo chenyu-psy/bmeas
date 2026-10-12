@@ -24,6 +24,12 @@ def api(path, method="GET", data=None, binary=False, missing=False):
     return result.stdout if binary else json.loads(result.stdout or b"null")
 
 
+def classify_source(head_package, base_package):
+    if base_package and not head_package:
+        raise ValueError("An existing package cannot be removed as a configuration-only change")
+    return "package" if head_package else "configuration"
+
+
 def admit(event, event_name, repository):
     """A manual verification can build, but can never authorize publication."""
     if event_name == "workflow_dispatch":
