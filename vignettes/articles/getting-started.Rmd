@@ -1,0 +1,69 @@
+---
+title: "Getting started with bmeas"
+---
+
+bmeas separates model preparation, execution planning and explicit fitting.
+This tutorial prepares a small Gaussian measurement model. The displayed code
+is not evaluated during website builds; it has been checked separately using
+`fit = FALSE` without native compilation or sampling.
+
+## Install the development snapshot
+
+There is no stable GitHub Release or CRAN distribution yet. R 4.1.0 or later is
+required. Install the current experimental branch:
+
+```{r, eval=FALSE}
+install.packages("remotes", repos = "https://cloud.r-project.org")
+remotes::install_github("chenyu-psy/bmeas", ref = "work/current-0.0.47.9000")
+```
+
+## Prepare a measurement model
+
+The formula declares one factor measured by three observed variables. Preparation
+uses the Gaussian response model for these wide-format variables. This tiny data
+set illustrates the interface; it is not an adequate scientific analysis.
+
+```{r, eval=FALSE}
+library(bmeas)
+
+data <- data.frame(
+  person = 1:4,
+  x1 = c(.2, .8, .3, 1),
+  x2 = c(.7, .6, -.3, .1),
+  x3 = c(-.2, .6, .9, .4)
+)
+
+spec <- bmeas(bmf(G = ~ x1 + x2 + x3), data,
+              subject = "person", fit = FALSE)
+check_model(spec)
+get_prior(spec)
+```
+
+`check_model()` exposes support and qualification boundaries. `get_prior()`
+reports the resolved priors; a displayed prior is not proof of scientific
+adequacy. Consult the model-specific documentation and review the implied
+measurement assumptions before fitting.
+
+## Inspect an execution plan
+
+Fitting requires an explicit finite resource policy. Planning remains separate
+from fitting and does not compile or sample:
+
+```{r, eval=FALSE}
+policy <- list(max_output_bytes = 256 * 1024^2, cache = "deferred")
+plan <- execution_plan(spec, chains = 1, iter = 100, warmup = 50,
+                       cores = 1, threads = 1, resources = policy)
+plan
+```
+
+These settings demonstrate the planning interface. They do not prescribe an
+adequate number of iterations or guarantee memory use, convergence or validity.
+No fitting command is run in this tutorial.
+
+## Where to go next
+
+Use the API reference for `bmeas()`, `bmf()`, `execution_plan()` and
+`fit_checks()`. The [development guides](https://github.com/chenyu-psy/bmeas/tree/work/current-0.0.47.9000/docs)
+describe supported computation profiles, explicit posterior-consumer budgets,
+predictive checks and structural postprocessing. Formal Bayes factors and
+density MCSE remain unavailable.

@@ -19,3 +19,5 @@ Depends: R (>= 4.1.0)
 Imports: stats, utils
 Suggests: cmdstanr (>= 0.8.0), posterior (>= 1.5.0), jsonlite, lavaan
 NeedsCompilation: no
+URL: https://chenyu-psy.github.io/bmeas/, https://github.com/chenyu-psy/bmeas
+BugReports: https://github.com/chenyu-psy/bmeas/issues

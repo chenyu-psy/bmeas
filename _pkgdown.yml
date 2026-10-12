@@ -8,10 +8,17 @@ template:
     primary: "#1b4f72"
 navbar:
   structure:
-    left: [intro, reference]
+    left: [intro, getstarted, reference]
     right: [search, github]
   components:
+    getstarted:
+      text: Get started
+      href: articles/getting-started.html
     github:
       icon: fa-github
       href: https://github.com/chenyu-psy/bmeas
       aria-label: GitHub repository
+home:
+  links:
+    - text: Development guides
+      href: https://github.com/chenyu-psy/bmeas/tree/work/current-0.0.47.9000/docs
