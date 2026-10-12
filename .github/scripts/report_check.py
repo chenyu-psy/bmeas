@@ -50,6 +50,7 @@ def collect(check_dir, tests_dir):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--suite', choices=['default-package', 'extended-r-only'], default='default-package')
     parser.add_argument('--check-dir', type=Path, default=Path('check'))
     parser.add_argument('--tests-dir', type=Path, default=Path('tests'))
     parser.add_argument('--output-dir', type=Path, default=Path('check'))
@@ -57,8 +58,9 @@ def main():
     records, skips = collect(args.check_dir, args.tests_dir)
     counts = {state: sum(r['status'] == state for r in records)
               for state in ['completed', 'failed', 'incomplete', 'not_started']}
-    summary = {'sha': os.environ.get('BUILD_SHA', ''), 'expected': len(records), **counts}
+    summary = {'sha': os.environ.get('BUILD_SHA', ''), 'suite': args.suite, 'expected': len(records), **counts}
     lines = [f"Checked commit: {summary['sha']}",
+             f"Suite: {args.suite}; no claim of native execution, posterior recovery or scientific qualification",
              f"Successfully completed test files: {counts['completed']} / {len(records)}",
              f"Failed: {counts['failed']}; incomplete: {counts['incomplete']}; not started: {counts['not_started']}"]
     lines += [f"{r['test']}: {r['status']}" for r in records if r['status'] != 'completed']

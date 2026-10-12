@@ -1,0 +1,23 @@
+source(file.path("helpers", "native-guard.R"))
+library(bmeas)
+# Actual provider R/JSON initialization; no CmdStan executable or model.
+local({
+  private <- function(n)getFromNamespace(n,"bmeas")
+  data <- data.frame(person=1:3,task="x",y=c(.1,.6,1.4))
+  model <- gaussian_model()
+  block <- function(mu)observe(model,data,"person","task","y",units="points",parameters=list(mu=mu,sigma=list(fixed=1)))
+  s<-bmeas(bmf(),list(score=block("task")),fit=FALSE)
+  init<-private(".bh_materialize_init")(s,s$checks$initialization)
+  stopifnot(identical(names(init),"alpha"),identical(dim(init$alpha),1L),nrow(s$tables$components)==0L)
+  stopifnot(requireNamespace("cmdstanr",quietly=TRUE),requireNamespace("jsonlite",quietly=TRUE))
+  paths<-getFromNamespace("process_init","cmdstanr")(function()init,num_procs=1L,
+    model_variables=list(parameters=list(alpha=list(dimensions=1L))))
+  on.exit(unlink(paths),add=TRUE)
+  actual<-jsonlite::fromJSON(paths[[1]],simplifyVector=FALSE)
+  stopifnot(is.list(actual$alpha),length(actual$alpha)==1L,actual$alpha[[1]]==init$alpha[1])
+  fixed<-bmeas(bmf(),list(score=block(list(fixed=0))),fit=FALSE)
+  stopifnot(length(private(".bh_materialize_init")(fixed,fixed$checks$initialization))==0L)
+  e<-tryCatch(bmeas(fixed,chains=1,iter=10,warmup=5,resources="development"),error=identity)
+  stopifnot(inherits(e,"measurement_error"),e$code=="E_NO_FREE_PARAMETERS")
+  cat("PASS actual singleton-vector JSON pipeline, zero common dimension and empty-parameter refusal\n")
+})

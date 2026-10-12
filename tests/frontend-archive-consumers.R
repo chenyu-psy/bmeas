@@ -129,6 +129,26 @@ stopifnot(identical(baseline_d$cache$hmc,ad$report_snapshot$portable$cache$hmc),
 stopifnot(identical(attr(ai,"source_receipt")$archive_integrity$status,"matched_owned_snapshot"))
 stopifnot(identical(ppc_plan(a,4,pb,"population")$source$archive_context$status,"reopened_and_verified"))
 cat("PASS relocated all-consumer parity, fixed-seed population and conditional PPC, RNG, immutable identities, cache-only updates\n")
+# Cold reopen uses the real tiny CSV consumer, without producer metadata doubles.
+transport <- file.path(owned,"cold.rds"); child <- file.path(owned,"cold.R")
+saveRDS(list(root=a$root,budget=ib,values=lapply(ai,identity),libs=.libPaths(),
+ guard=normalizePath(file.path("helpers","native-guard.R"))),transport)
+writeLines(c(
+ 'z <- readRDS(commandArgs(TRUE)[1]); .libPaths(z$libs)',
+ 'source(z$guard); library(bmeas)',
+ 'ns <- asNamespace("bmeas")',
+ 'for(n in c(".bh_compile_scalar",".bh_fit_scalar",".bh_provider_sample")) {',
+ ' unlockBinding(n,ns); assign(n,function(...)stop("FORBIDDEN cold fitting"),ns); lockBinding(n,ns)',
+ '}',
+ 'a <- read_fit_archive(z$root)',
+ 'out <- individual_parameter_summary(a,c("predictor","natural","received"),z$budget)',
+ 'stopifnot(identical(names(out),names(z$values)),',
+ ' all(vapply(names(out),function(n)identical(out[[n]],z$values[[n]]),FALSE)),',
+ ' is.list(summary(a)),is.list(fit_checks(a)))',
+ 'cat("PASS cold archive reopen, real two-chain CSV consumer and passive reports\\n")'
+),child)
+status <- system2(file.path(R.home("bin"),"Rscript"),c("--vanilla",shQuote(child),shQuote(transport)))
+stopifnot(identical(status,0L))
 # Tampered snapshot immutable fields cannot become active authority.
 fake <- a;fake$report_snapshot$portable$immutable$retained_artifacts$saved_source_text <- "FAKE"
 stopifnot(identical(individual_parameter_summary(fake,"predictor",ib),individual_parameter_summary(a,"predictor",ib)))
