@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   branch-policy:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
     timeout-minutes: 2
     steps:
       - name: Enforce PR route from trusted base workflow

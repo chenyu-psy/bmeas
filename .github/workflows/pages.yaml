@@ -1,0 +1,85 @@
+name: Package website
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: bmeas-validation
+  cancel-in-progress: false
+  queue: max
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pages: read
+    env:
+      OMP_NUM_THREADS: 1
+      OPENBLAS_NUM_THREADS: 1
+      MKL_NUM_THREADS: 1
+      VECLIB_MAXIMUM_THREADS: 1
+      MAKEFLAGS: -j1
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Detect actual package source
+        id: detect
+        shell: python
+        run: |
+          import os, pathlib
+          package = pathlib.Path('DESCRIPTION').exists()
+          if package:
+              assert all(pathlib.Path(p).exists() for p in ['NAMESPACE', 'R']), 'Incomplete package source'
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('package=' + str(package).lower() + '\n')
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05
+        if: steps.detect.outputs.package == 'true'
+        with:
+          r-version: '4.5.2'
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05
+        if: steps.detect.outputs.package == 'true'
+        with:
+          extra-packages: any::pkgdown
+          dependencies: 'NA'
+          install-quarto: false
+      - name: Install the package without optional native providers
+        if: steps.detect.outputs.package == 'true'
+        run: R CMD INSTALL .
+      - name: Build API website from actual Rd files
+        if: steps.detect.outputs.package == 'true'
+        shell: Rscript {0}
+        run: |
+          pkgdown::check_pkgdown()
+          pkgdown::build_site(new_process = FALSE, install = FALSE, examples = FALSE,
+                              run_dont_run = FALSE, preview = FALSE)
+      - name: Prepare initial page without claiming an API
+        if: steps.detect.outputs.package != 'true'
+        shell: python
+        run: |
+          import pathlib, shutil
+          pathlib.Path('_site').mkdir(exist_ok=True)
+          shutil.copyfile('site/index.html', '_site/index.html')
+          pathlib.Path('_site/.nojekyll').touch()
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b
+        with:
+          path: _site
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
+        id: deployment

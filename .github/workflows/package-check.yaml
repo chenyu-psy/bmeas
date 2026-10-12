@@ -1,0 +1,168 @@
+name: Check exact package commit
+on:
+  workflow_call:
+    inputs:
+      sha:
+        required: true
+        type: string
+      compare-to:
+        default: ''
+        type: string
+      require-new-tag:
+        default: false
+        type: boolean
+      artifact-name:
+        default: ''
+        type: string
+    outputs:
+      package:
+        value: ${{ jobs.check.outputs.package }}
+      version:
+        value: ${{ jobs.check.outputs.version }}
+      prerelease:
+        value: ${{ jobs.check.outputs.prerelease }}
+permissions:
+  contents: read
+jobs:
+  check:
+    name: package-check
+    runs-on: macos-15
+    timeout-minutes: 45
+    outputs:
+      package: ${{ steps.detect.outputs.package }}
+      version: ${{ steps.metadata.outputs.version }}
+      prerelease: ${{ steps.metadata.outputs.prerelease }}
+    env:
+      BUILD_SHA: ${{ inputs.sha }}
+      _R_CHECK_NCPU_: 1
+      OMP_NUM_THREADS: 1
+      OPENBLAS_NUM_THREADS: 1
+      MKL_NUM_THREADS: 1
+      VECLIB_MAXIMUM_THREADS: 1
+      MAKEFLAGS: -j1
+      _R_CHECK_FORCE_SUGGESTS_: 'true'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect actual package at exact SHA
+        id: detect
+        shell: python
+        run: |
+          import os, pathlib, re, subprocess
+          sha = os.environ['BUILD_SHA']
+          assert re.fullmatch('[0-9a-f]{40}', sha)
+          assert subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().strip() == sha
+          found = pathlib.Path('DESCRIPTION').exists()
+          if found:
+              assert all(pathlib.Path(p).exists() for p in ['NAMESPACE', 'R']), 'Incomplete package source'
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('package=' + str(found).lower() + '\n')
+          if not found:
+              with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+                  f.write('Configuration-only commit: no package tests or publication.\n')
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        if: steps.detect.outputs.package == 'true'
+        with:
+          r-version: '4.5.2'
+          use-public-rspm: true
+      - name: Validate R version ordering and NEWS
+        if: steps.detect.outputs.package == 'true'
+        id: metadata
+        env:
+          COMPARE_SHA: ${{ inputs.compare-to }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "$COMPARE_SHA" ]]; then
+            [[ "$COMPARE_SHA" =~ ^[0-9a-f]{40}$ ]]
+            git cat-file -e "$COMPARE_SHA^{commit}"
+            if git cat-file -e "$COMPARE_SHA:DESCRIPTION" 2>/dev/null; then
+              git show "$COMPARE_SHA:DESCRIPTION" > "$RUNNER_TEMP/base-DESCRIPTION"
+              export BASE_DESCRIPTION="$RUNNER_TEMP/base-DESCRIPTION"
+            fi
+          fi
+          Rscript --vanilla .github/scripts/release_metadata.R >> "$GITHUB_OUTPUT"
+      - name: Reject reused version in a new release PR
+        if: steps.detect.outputs.package == 'true' && inputs.require-new-tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.metadata.outputs.version }}
+        shell: python
+        run: |
+          import os, sys
+          sys.path.insert(0, '.github/scripts')
+          from automation import api
+          prefix = 'repos/' + os.environ['GITHUB_REPOSITORY']
+          v = os.environ['VERSION']
+          assert api(prefix + '/git/ref/tags/' + v, missing=True) is None, 'Version tag already exists'
+          assert api(prefix + '/releases/tags/' + v, missing=True) is None, 'Version release already exists'
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        if: steps.detect.outputs.package == 'true'
+        with:
+          packages: |
+            deps::.
+            any::rcmdcheck
+            any::posterior@1.7.0
+            any::lavaan@0.7-2
+            stan-dev/cmdstanr@da99e2ba954658bdad63bffb738c4444c33a4e0e
+          dependencies: '"all"'
+          install-quarto: false
+          install-pandoc: false
+      - name: Build installable source tar
+        if: steps.detect.outputs.package == 'true'
+        run: R CMD build . --no-manual
+      - name: Check that exact tar and all package tests
+        if: steps.detect.outputs.package == 'true'
+        env:
+          VERSION: ${{ steps.metadata.outputs.version }}
+        shell: Rscript {0}
+        run: |
+          rcmdcheck::rcmdcheck(path = paste0("bmeas_", Sys.getenv("VERSION"), ".tar.gz"),
+                              args = "--no-manual", error_on = "warning", check_dir = "check")
+      - name: Report test coverage and optional skips
+        if: always() && steps.detect.outputs.package == 'true'
+        shell: python
+        run: |
+          import glob, os, pathlib, re
+          expected = len(list(pathlib.Path('tests').glob('*.R')))
+          files = glob.glob('check/**/tests/*.Rout*', recursive=True)
+          lines = [f"Checked commit: {os.environ['BUILD_SHA']}",
+                   f"Test output files: {len(files)} / {expected}"]
+          for name in sorted(files):
+              for line in pathlib.Path(name).read_text(errors='replace').splitlines():
+                  if re.match(r'^(SKIP|CmdStanR unavailable)', line):
+                      lines.append(f"{pathlib.Path(name).name}: {line}")
+          text = '\n'.join(lines) + '\n'
+          print(text)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write('## Engineering test coverage\n\n' + text)
+          assert expected > 0 and len(files) == expected, 'Package tests did not all complete'
+      - name: Prepare checked release artifact
+        if: success() && steps.detect.outputs.package == 'true' && inputs.artifact-name != ''
+        env:
+          VERSION: ${{ steps.metadata.outputs.version }}
+          PRERELEASE: ${{ steps.metadata.outputs.prerelease }}
+        shell: python
+        run: |
+          import hashlib, json, os, pathlib, shutil
+          out = pathlib.Path('release-dist'); out.mkdir()
+          name = 'bmeas_' + os.environ['VERSION'] + '.tar.gz'
+          shutil.copyfile(name, out / name)
+          digest = hashlib.sha256((out / name).read_bytes()).hexdigest()
+          metadata = {'sha': os.environ['BUILD_SHA'], 'version': os.environ['VERSION'],
+                      'prerelease': os.environ['PRERELEASE'] == 'true', 'file': name, 'sha256': digest}
+          (out / 'SHA256SUMS').write_text(digest + '  ' + name + '\n')
+          (out / 'release.json').write_text(json.dumps(metadata, indent=2, sort_keys=True) + '\n')
+      - name: Verify artifact before upload
+        if: success() && steps.detect.outputs.package == 'true' && inputs.artifact-name != ''
+        run: python3 .github/scripts/automation.py verify
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: success() && steps.detect.outputs.package == 'true' && inputs.artifact-name != ''
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: release-dist/
+          if-no-files-found: error
+          retention-days: 14

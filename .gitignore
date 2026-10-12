@@ -6,3 +6,5 @@
 check/
 release-dist/
 .DS_Store
+
+_site/

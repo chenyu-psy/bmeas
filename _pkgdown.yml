@@ -1,0 +1,17 @@
+url: https://chenyu-psy.github.io/bmeas/
+destination: _site
+development:
+  mode: unreleased
+template:
+  bootstrap: 5
+  bslib:
+    primary: "#1b4f72"
+navbar:
+  structure:
+    left: [intro, reference]
+    right: [search, github]
+  components:
+    github:
+      icon: fa-github
+      href: https://github.com/chenyu-psy/bmeas
+      aria-label: GitHub repository

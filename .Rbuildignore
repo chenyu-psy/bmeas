@@ -1,0 +1,7 @@
+^\.github$
+^\.gitignore$
+^docs$
+^tools$
+^site$
+^_site$
+^_pkgdown[.]yml$
