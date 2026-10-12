@@ -2,8 +2,7 @@
 
 Public constructor: `ezdm_model()`. Sole explicit profile:
 `ezdm_model(version = "revised_54a07b6_v1")`. Other versions fail rather than
-silently selecting a different likelihood. The additive integration candidate 0.0.30.9001 is based on the latest
-archive/scalable 0.0.29.9001 source. No existing R core or frozen test was changed.
+silently selecting a different likelihood.
 Bounded native density, gradient, and all-fixed frontend checks have passed.
 Arbitrary hierarchical execution, HMC and scientific adequacy are not qualified.
 
@@ -12,8 +11,7 @@ Arbitrary hierarchical execution, HMC and scientific adequacy are not qualified.
 Scientific contract pinned to bmm commit
 54a07b6fa34506bd14116d295eea9db234071f28 (2026-10-07):
 https://github.com/popov-lab/bmm/tree/54a07b6fa34506bd14116d295eea9db234071f28
-The source manifest in the accompanying design snapshot identifies the exact
-upstream blobs. The mutable develop branch is not a dependency.
+The mutable develop branch is not a dependency.
 
 Upstream declares GPL-2; bmeas declares MIT. This implementation does not embed,
 translate, or require upstream implementation files. It was authored from the
@@ -119,44 +117,15 @@ is included. fit/log_lik capabilities remain explicitly `unvalidated`; these met
 labels do not block the separately gated experimental execution path. Bounded
 fixed-state native evidence is not general fit qualification.
 
-## Historical bounded native gate (completed under explicit amendment)
+## Validation scope
 
-The original plan was to compile one tiny standalone Stan program containing these
-functions, data arrays for the existing 351-row oracle grid, and generated
-quantities for all four cumulants and each joint row log density. Execute one
-fixed_param draw, one chain, one thread, with no HMC and no study data. Compare
-finite outputs against the oracle with relative/scaled tolerance 2e-10 and
-absolute tolerance 2e-10 near zero. Independently compile the already generated
-all-fixed frontend model to check the actual typed row call; evaluate its three
-rows once, requiring the summed density to match the R row sum. Additionally
-check finite differences or exposed autodiff for drift around 0 and x=.5 on
-both sides with a declared step-size sweep. Fail rather than introducing floors
-if values or derivatives disagree. Budget: at most 2 native compiles, 240 seconds
-per compile and 30 seconds per execution, serial. A timeout is inconclusive.
-Any later hierarchical smoke fit would require another explicit decision.
-
-## Recorded native evidence and remaining scope
-
-The original two-program gate passed under an explicit amendment: the first
-program used effective O2 due to a retained toolchain flag; the second used
-verified effective O0. Neither used unsafe-math flags. Exactly two fixed_param
-draws and six existing-executable autodiff evaluations covered 351 supported
-summary rows, three ID-aligned all-fixed frontend rows, and zero/seam gradients.
-Maximum scaled derivative discrepancy was 3.81e-14. The first O0 deviation and
-O0 compiler warning are retained in the native-gate report accompanying this
-candidate. This is not HMC, recovery, or arbitrary-hierarchy qualification.
-The separate two-person/two-row/12-coordinate free-hierarchy fixed-state gate
-completed on 2026-10-08 at 04:00:35 UTC. One serial effective-O0 compilation,
-one fixed_param draw and two existing-executable log_prob evaluations verified
-the independent-residual alpha/SD/white → eta → natural-parameter path, normalized
-row likelihoods, prior kernels, positive-SD unconstraining Jacobian and all 24
-coordinate gradients at two frozen states. Maximum scaled gradient discrepancy
-was 2.66e-15. The recorded gate covers only this two-person independent-residual
-fixture, with no factors, loadings or free correlations; it does not establish
-arbitrary-hierarchy, HMC, identification, recovery or scientific qualification.
-See the accompanying FREE_HIERARCHY_GATE_REPORT.md and retained receipts.
-Capability labels and generic experimental gates remain unchanged.
-
+Historical frozen-version checks covered bounded summary-density and gradient
+arithmetic, the all-fixed typed frontend, and a two-person independent-residual
+alpha/SD/white parameterization at fixed states. The compiler optimization
+settings were recorded separately; these checks did not run HMC or establish
+recovery, identification, arbitrary factors/loadings/free correlations, or
+scientific adequacy. They are not a fresh qualification of the current commit.
+Capability labels and explicit experimental execution gates remain unchanged.
 
 ## Portable/archive export in 0.0.31.9001
 

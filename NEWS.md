@@ -1,5 +1,7 @@
 # bmeas 0.0.47.9000 (unpublished candidate)
 
+- Reuse immutable descriptors and repeated public-check results in constant-factor tests, retaining all scientific factor/order and extreme-value cases. Keep all centered-final declaration/init/direct-cache fixtures, and exercise the generic public fitting/budget lifecycle on six distinct representative shapes. Remove duplicate historical documentation and update current structural capability boundaries.
+
 - Remove the obsolete version-0.0.40 local approval/ledger integration script, unreachable product-cache MGS code and unused residual-cache setup. Stop writing unconsumed centered-test inventory artifacts. Retain the complete numerical-message validator boundary matrix while using representative records for public report integration; remove its one-off private-provider audit of an external historical fit. Production code is unchanged.
 
 - Use the existing frozen synthetic 0.0.33 M3-CS descriptor for passive signature portability tests, without requiring an external Stan resource. Retain both accepted hashes, unchanged serialization, zero callbacks and rejection of altered hashes, wrappers and resource digests. This fixture does not qualify native execution or resource validity.

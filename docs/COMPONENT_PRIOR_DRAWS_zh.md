@@ -1,8 +1,6 @@
-> 0.0.38.9000 更新：下文记录 .37 原生先验增量；该 RNG 范围不变。另增可选限定 lavaan 映射见 STRUCTURAL_LAVAAN_zh.md；S4/BF 仍未实现。
+# 窄范围联合成分总体先验
 
-# 0.0.37.9000：窄范围联合成分总体先验
-
-新增 component_prior_draws(spec, draws, seed, control=list())。输入当前 prepared specification；输出与 .36 后验 adapter 完全同模型、同 prior、同坐标与方向定义的 bmeas_population_draws。配合 structural_draws() 得到同一解析回归 functional 的诱导先验/后验。没有密度估计、SDDR/BF、lavaan、新 likelihood、重拟合或 Stan/HMC。
+新增 component_prior_draws(spec, draws, seed, control=list())。输入当前 prepared specification；输出与 .36 后验 adapter 完全同模型、同 prior、同坐标与方向定义的 bmeas_population_draws。配合 structural_draws() 得到同一解析回归 functional 的诱导先验/后验。生成器本身不计算密度或 BF，不调用 lavaan、不增加 likelihood、不重拟合，也不运行 Stan/HMC。独立后处理的可选 lavaan 映射和 S4a 密度诊断分别见 STRUCTURAL_LAVAAN_zh.md 与 STRUCTURAL_SDDR_DIAGNOSTICS_zh.md；正式 BF 与 density MCSE 仍不可用。
 
 ## 支持范围
 
@@ -38,8 +36,6 @@ numeric/work 预算计入矩阵副本、availability、keys、canonical-coordina
 
 ## 验证解释
 
-独立参考实现：预先固定 K=2,3,4 × eta=1,2，各 4000 IID draws，总计 24000；固定种子与容差，不重抽失败。87 项 checks 通过，串行 1.266 秒，外层 timeout 60 秒。覆盖精确构造、边缘矩/分布、determinant expectation、联合三角乘积依赖、RNG 恢复和失败 ID。初次 K=1 空 shape 问题在分布测试之前修正；分布套件只执行一次。该历史参考 receipt 不冒充当前 package 完整检查。
+独立参考分布检查覆盖普通 LKJ 的边缘矩/分布、determinant expectation、联合三角乘积依赖、RNG 恢复和失败 ID。当前包仍需针对当前提交验证，历史参考结果不替代完整包检查。
 
-当前 package 的 source/installed focused tests、独立审计及 combined exact-tar full-check 结果以交付 validation receipts 为准。早期 522 解析检查、.36 的 91+11+17 focused checks 及其失败/修复审计记录按各自冻结版本保留。
-
-正确先验抽样不证明后验适当性、全局识别、HMC 合格、真实研究有效或 SDDR 条件先验兼容。该 .37 增量未实现 S3/S4；当前 .38 的限定 S3 见上方更新，S4 正式密度/BF 仍待实现。
+正确先验抽样不证明后验适当性、全局识别、HMC 合格、真实研究有效或 SDDR 条件先验兼容。当前限定 lavaan 映射和 S4a 单系数密度诊断见对应技术文档；正式 BF 与 density MCSE 仍不可用。

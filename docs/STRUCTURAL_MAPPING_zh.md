@@ -1,14 +1,12 @@
-> 0.0.38.9000 更新：以下 .36 记录作为冻结增量历史保留。当前另有 component_prior_draws() 窄范围原生先验与可选限定 lavaan S3；详见 COMPONENT_PRIOR_DRAWS_zh.md、STRUCTURAL_LAVAAN_zh.md。S4 密度/BF 仍未实现。
-
 # 可选结构后处理 S1/S2：联合总体协方差契约与解析回归
 
-本增量为 0.0.36.9000。它不修改 measurement fitting，不运行 Stan/HMC，不自动启动 LOO，不实现正式 BF、KDE、lavaan 或原生联合先验 RNG。
+本模块定义联合总体协方差契约与确定性解析回归，不修改 measurement fitting，不运行 Stan/HMC，不自动启动 LOO。窄范围联合先验生成、可选 lavaan 映射与 S4a 密度诊断分别见 COMPONENT_PRIOR_DRAWS_zh.md、STRUCTURAL_LAVAAN_zh.md 和 STRUCTURAL_SDDR_DIAGNOSTICS_zh.md；正式 BF 与 density MCSE 仍不可用。
 
-## 实际审计结果
+## 联合协方差与先验来源
 
 现有 `component_draws(fit)` 保存的是同一 retained state 的总体 `R_component` 与 `component_row_sd`，并据此形成协方差；不是个人 factor scores 的样本协方差。它有 `chain_id/saved_row`、稳定坐标 ID、marker/unit scale、orientation/GF2 sign-system、完整 prior specification、模型 fingerprint 及上游科学状态。原始 unavailable 标记、非精确对称和非 SPD 矩阵都可能保留。
 
-现有 prior specification 不等于 prior draws。审计没有找到当前包的联合 population prior RNG。本增量不通过重命名 posterior 或拼接边缘抽样填补缺口。未来 RNG 必须按实际 prior chart、约束、量尺和完整联合参数化生成，另外验证；仅有总体矩阵后验不能计算 SDDR。
+prior specification 不等于 prior draws。当前 component_prior_draws() 只支持其明确限定的联合先验；不能通过重命名 posterior 或拼接边缘抽样扩大该范围。先验必须按实际 prior chart、约束、量尺和完整联合参数化生成并验证；仅有总体矩阵后验不能计算 SDDR。
 
 ## 本次公开接口
 
@@ -33,6 +31,6 @@ Prior/posterior 可有不同 D，不逐行配对。必须相同 model/prior iden
 
 ## 验证边界
 
-2026-10-04 的 522 项历史 base-R 解析检查已复核脚本与 fixture，覆盖数学公式而非本 API。新增测试复用其 scalar grid 和 multivariate roundtrip 公式，另测当前契约、身份、量尺、方向、失败和 saved-reader 连接。本增量的精确执行证据由外层 validation 记录，不把历史 522 自动计入新接口通过数。
+解析映射的测试使用独立 scalar grid 和 multivariate roundtrip 公式，并检查当前契约、身份、量尺、方向、失败和 saved-reader 连接。数学参考实现的历史结果不替代当前包和当前提交的回归验证。
 
-S3 lavaan 投影、S4 零点密度与正式 SDDR、S5 多维/乘积约束仍未实现。普通后验路径摘要可以独立使用，解释为 population regression functional，不是另一份 generative SEM likelihood。
+限定 lavaan 投影与 S4a 单系数密度诊断已实现，范围见对应技术文档。正式 BF、density MCSE 与 S5 多维/乘积约束仍未实现。普通后验路径摘要可以独立使用，解释为 population regression functional，不是另一份 generative SEM likelihood。

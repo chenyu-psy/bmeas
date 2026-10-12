@@ -1,5 +1,3 @@
-> .39 更新：新增 S4a 单系数 point-KDE/log-density-ratio 诊断；正式 BF 与 MCSE 仍不可用。最新范围见 STRUCTURAL_SDDR_DIAGNOSTICS_zh.md。下文保留旧版本路线和范围记录。
-
 # 当前能力速查：0.0.47.9000 未发布候选
 
 这里区分「可以声明/生成代码」「允许执行」「有何验证」「保存后能做什么」。支持接口不等于后验推断合格。具体组合应查看 check_model(spec)$backend 的 support / qualification 与明确错误；experimental 不能绕过硬性科学错误、来源检查或预算。
@@ -22,8 +20,3 @@ SAM、将成分协方差后验自动当成新结构似然、通用 SEM、LOO、�
 ## 下一阶段计划
 
 S1/S2 的联合协方差契约与确定性解析回归映射已在限定范围实现。0.0.37.9000 新增完整普通 LKJ（1≤eta≤10000）、unit-SD、方向已解析的原生联合成分协方差先验生成器；不支持受限相关图、raw-B、marker/basis/share 或 parameter-residual 扩展。0.0.38.9000 新增可选 lavaan 0.7.2 的限定观测变量协方差回归/路径映射（S3）：与解析饱和回归区分、保留所有失败/边界行、同一固定 prior/posterior 映射；不是通用 SEM。0.0.39.9000 已实现 S4a 单系数 point-KDE/log-density-ratio 诊断；正式 SDDR BF 与 density MCSE 仍不可用；不将测量协方差后验当成新 likelihood。详见 COMPONENT_PRIOR_DRAWS_zh.md 与 STRUCTURAL_LAVAAN_zh.md。完整工作流见 CURRENT_WORKFLOW_zh.md。现有测试不代表真实研究、通用模型恢复、HMC 或集群规模性能已经验证。
-
-
-## 历史增量 0.0.36.9000：可选 structural S1/S2
-
-新增 `population_draws()`、`component_population_draws()`、`structural_draws()` 与描述性摘要。支持严格的联合总体协方差契约及确定性解析回归映射，保留 draw ID、失败状态与全部上游证据。该冻结版本原生 adapter 仅 posterior；当时没有原生 prior RNG、BF 或 lavaan。0.0.37.9000 的窄范围先验增量见上文。详见 [STRUCTURAL_MAPPING_zh.md](STRUCTURAL_MAPPING_zh.md)。更早章节中“尚无结构接口”的陈述是当时版本状态；该历史版本尚未实现 SDDR 后续阶段；当前 S4a 诊断范围见上文。

@@ -1,5 +1,3 @@
-> .39 更新：新增 S4a 单系数 point-KDE/log-density-ratio 诊断；正式 BF 与 MCSE 仍不可用。最新范围见 STRUCTURAL_SDDR_DIAGNOSTICS_zh.md。下文保留旧版本路线和范围记录。
-
 # 当前工作流：0.0.47.9000 未发布候选
 
 ## 1. 声明、检查，再选择执行范围
@@ -29,8 +27,3 @@ product portable 的 ppc_plan() 仅做有界元数据/schema/绑定检查，完�
 ## 5. 验证如何解释
 
 此前 product saved-reader 的 R-only 回归按其冻结版本保留；本候选新增窄范围 native-R 先验、解析结构映射及 callback capture 回归。完整包检查尚须以单独候选验收记录为准，不继承前一冻结 release 的通过结论。四次 joint M3-CS cached fixed_param、common-product affine 门及 residual/dual cached-executable 原生门属于各自此前冻结分支，本次未重新执行。residual/dual 原比较器错误地期望 GQ 输出 transformed parameters，后经批准仅修正已保存输出比较，未改数据、容差或重跑原生执行。它们不证明后验来源、HMC、识别性、恢复、收敛、真实研究科学适用性或集群规模性能。原 M6 的集群参数恢复、覆盖率与研究验证仍待完成；本次工程验收不替代这些验证。分发内容不含原生二进制、序列化运行状态或真实数据。
-
-
-## 历史增量 0.0.36.9000：可选 structural S1/S2
-
-新增 `population_draws()`、`component_population_draws()`、`structural_draws()` 与描述性摘要。支持严格的联合总体协方差契约及确定性解析回归映射，保留 draw ID、失败状态与全部上游证据。该冻结版本原生 adapter 仅 posterior；当时没有原生 prior RNG、BF 或 lavaan。0.0.37.9000 的窄范围先验增量见第 4 节。详见 [STRUCTURAL_MAPPING_zh.md](STRUCTURAL_MAPPING_zh.md)。更早章节中“尚无结构接口”的陈述是当时版本状态；SDDR 后续阶段仍未实现。

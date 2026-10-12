@@ -3,7 +3,8 @@
 The package is now named `bmeas`. The main entries are `bmeas()` and `bmf()`. The other modeling and inspection helpers retain their names. `bhmm()` and `bhmf()` remain exact callable aliases inside the new package, so an existing script can begin by changing `library(bhmm)` to `library(bmeas)`.
 
 ```r
-install.packages("bmeas_0.0.14.9002.tar.gz", repos = NULL, type = "source")
+# Install a source tar built from the version you intend to use.
+install.packages("path/to/bmeas_VERSION.tar.gz", repos = NULL, type = "source")
 library(bmeas)
 m <- bmf(G = ~x1 + x2 + x3)
 s <- bmeas(m, data, subject = "person", fit = FALSE)

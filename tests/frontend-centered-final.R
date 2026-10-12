@@ -303,7 +303,13 @@ local({
    ok(!grepl('rounded stored component R checked separately',reason,fixed=TRUE),paste(name,'final-marginal conditioning cache makes no raw-only stored-component claim'))
   }
   fit<-structure(list(spec=s,cache=cache,run=list(),backend=NULL,provenance=list(execution_profile=plan$execution_profile)),class=c('bmeas_fit','bhmm_fit'))
-  if(sum(get_prior(s)$parameter_count)) {
+  # All fixtures above retain independent declaration/init/cache assertions.
+  # Repeat the generic public fitting and output-budget transaction only for
+  # distinct lifecycle shapes: ordinary, residual MGS, shared affine, signed
+  # S17 decomposition, singleton ranks and zero task-white dimensions.
+  lifecycle_fixtures<-c('independent','ordinary_residual','shared_residual',
+                        's17','singleton','no_task_white')
+  if(name%in%lifecycle_fixtures && sum(get_prior(s)$parameter_count)) {
    for(log_lik in c(FALSE,TRUE)) {
     before_calls<-c(calls$compile,calls$sample);warnings<-character()
     fit<-withCallingHandlers(bmeas(s,chains=1,iter=20,warmup=10,cores=1,threads=1,seed=63,
