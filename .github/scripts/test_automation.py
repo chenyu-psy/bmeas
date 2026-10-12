@@ -10,7 +10,7 @@ import tarfile
 import tempfile
 import unittest
 
-from automation import admit, publish, validate_artifact
+from automation import admit, classify_source, publish, validate_artifact
 
 SHA = "a" * 40
 REPOSITORY = "chenyu-psy/bmeas"
@@ -39,6 +39,13 @@ class AutomationBoundaries(unittest.TestCase):
 
     def write_metadata(self):
         (self.directory / "release.json").write_text(json.dumps(self.metadata))
+
+    def test_configuration_package_and_removal_matrix(self):
+        self.assertEqual(classify_source(False, False), "configuration")
+        self.assertEqual(classify_source(True, False), "package")
+        self.assertEqual(classify_source(True, True), "package")
+        with self.assertRaises(ValueError):
+            classify_source(False, True)
 
     def test_manual_verification_never_publishes(self):
         self.assertEqual(admit({"inputs": {"sha": SHA}}, "workflow_dispatch", REPOSITORY), (SHA, False))

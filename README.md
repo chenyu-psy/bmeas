@@ -72,12 +72,12 @@ reference generated from the package's Rd documentation once approved package
 source reaches main. The current public homepage describes the development
 status; the complete development API is available in a separate local preview.
 
-- [Getting started](vignettes/articles/getting-started.Rmd)
+- [Getting started](https://github.com/chenyu-psy/bmeas/blob/work/current-0.0.47.9000/vignettes/articles/getting-started.Rmd)
 - [Current capabilities](https://github.com/chenyu-psy/bmeas/blob/work/current-0.0.47.9000/docs/CURRENT_CAPABILITIES_zh.md) and [workflow guide](https://github.com/chenyu-psy/bmeas/blob/work/current-0.0.47.9000/docs/CURRENT_WORKFLOW_zh.md)
 - [Resource policies](https://github.com/chenyu-psy/bmeas/blob/work/current-0.0.47.9000/docs/RESOURCE_POLICY.md)
 - [Diagnostics](https://github.com/chenyu-psy/bmeas/blob/work/current-0.0.47.9000/docs/DIAGNOSTIC_REFRESH.md) and [predictive checks](https://github.com/chenyu-psy/bmeas/blob/work/current-0.0.47.9000/docs/BASIC_FAMILY_PPC.md)
 - [Structural postprocessing](https://github.com/chenyu-psy/bmeas/blob/work/current-0.0.47.9000/docs/STRUCTURAL_MAPPING_zh.md)
-- [Documentation index](https://github.com/chenyu-psy/bmeas/blob/work/current-0.0.47.9000/docs/README.md), [migration](https://github.com/chenyu-psy/bmeas/blob/work/current-0.0.47.9000/docs/MIGRATION.md) and [release notes](NEWS.md)
+- [Documentation index](https://github.com/chenyu-psy/bmeas/blob/work/current-0.0.47.9000/docs/README.md), [migration](https://github.com/chenyu-psy/bmeas/blob/work/current-0.0.47.9000/docs/MIGRATION.md) and [release notes](https://github.com/chenyu-psy/bmeas/blob/work/current-0.0.47.9000/NEWS.md)
 
 ## Current limitations
 
